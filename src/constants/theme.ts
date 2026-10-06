@@ -1,4 +1,4 @@
 export const colors = {
-  background: '#F8F7F3', surface: '#FFFFFF', ink: '#18392D',
-  muted: '#5C6E65', primary: '#236447', border: '#DBE3DA', accent: '#E8F0DF',
+  background: '#FFF8F1', surface: '#FFFFFF', ink: '#2B1D14',
+  muted: '#6B5B50', primary: '#C2410C', border: '#F1DFD0', accent: '#FFE8D6',
 };
