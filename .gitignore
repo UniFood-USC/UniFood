@@ -46,3 +46,9 @@ yarn-error.*
 # Local working material
 /AGENTS.md
 /docs/
+
+# Local emulator output and compiled service
+functions/lib/
+*-debug.log
+.firebase/
+coverage/
