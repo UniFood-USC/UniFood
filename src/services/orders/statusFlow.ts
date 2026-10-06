@@ -1,4 +1,4 @@
-import { FulfillmentMode, OrderStatus } from '../../../types/domain';
+import { FulfillmentMode, OrderStatus } from '../../types/domain';
 
 export const STATUS_FLOW: Record<FulfillmentMode, OrderStatus[]> = {
   pickup:   ['received', 'preparing', 'ready', 'collected'],

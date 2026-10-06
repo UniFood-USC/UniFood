@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { colors } from '../../../constants/theme';
 import { FulfillmentMode, Order, OrderStatus } from '../../../types/domain';
-import { STATUS_FLOW, statusLabel } from './statusFlow';
+import { STATUS_FLOW, statusLabel } from '../../../services/orders/statusFlow';
 
 type Props = { mode: FulfillmentMode; status: OrderStatus; history?: Order['statusHistory'] };
 
@@ -18,7 +18,7 @@ export function OrderStatusStepper({ mode, status, history }: Props) {
         const reached = i <= current;
         const active = i === current;
         const last = i === steps.length - 1;
-        const detail = reached ? time(history?.[s]) : 'Pendiente';
+        const detail = reached ? time(history?.[s as keyof NonNullable<Order['statusHistory']>]) : 'Pendiente';
         const state = active ? 'estado actual' : reached ? 'completado' : 'pendiente';
         return (
           <View

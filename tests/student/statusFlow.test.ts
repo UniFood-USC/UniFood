@@ -1,5 +1,5 @@
 import { FulfillmentMode, OrderStatus } from '../../src/types/domain';
-import { STATUS_FLOW, isTerminal, statusLabel } from '../../src/features/student/tracking/statusFlow';
+import { STATUS_FLOW, isTerminal, statusLabel } from '../../src/services/orders/statusFlow';
 
 // Record<OrderStatus, true> obliga a TypeScript a quejarse si se agrega
 // un estado a domain.ts y no se agrega aquí (correr `npx tsc --noEmit`).
