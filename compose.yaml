@@ -1,0 +1,39 @@
+services:
+  workspace: &workspace
+    build: .
+    command: npm run emulators
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - dependencies:/workspace/node_modules
+      - functions-dependencies:/workspace/functions/node_modules
+      - npm-cache:/root/.npm
+      - firebase-cache:/root/.cache/firebase
+      - expo-state:/root/.expo
+    environment:
+      FIREBASE_AUTH_EMULATOR_HOST: 127.0.0.1:9099
+      FIRESTORE_EMULATOR_HOST: 127.0.0.1:8080
+      GCLOUD_PROJECT: demo-unifood
+    ports:
+      - "127.0.0.1:4000:4000"
+      - "${UNIFOOD_HOST:-127.0.0.1}:5001:5001"
+      - "${UNIFOOD_HOST:-127.0.0.1}:8080:8080"
+      - "${UNIFOOD_HOST:-127.0.0.1}:9099:9099"
+  app:
+    <<: *workspace
+    command: npm run web -- --go --host lan --port 8081
+    stdin_open: true
+    tty: true
+    environment:
+      BROWSER: none
+      CI: "0"
+      EXPO_PUBLIC_EMULATOR_HOST: ${UNIFOOD_HOST:-127.0.0.1}
+      EXPO_PACKAGER_PROXY_URL: http://${UNIFOOD_HOST:-127.0.0.1}:8081
+    ports:
+      - "${UNIFOOD_HOST:-127.0.0.1}:8081:8081"
+volumes:
+  dependencies:
+  functions-dependencies:
+  npm-cache:
+  firebase-cache:
+  expo-state:
