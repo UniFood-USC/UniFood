@@ -1,7 +1,8 @@
 services:
   workspace: &workspace
     build: .
-    command: npm run emulators
+    command: npm run emulators -- --import=.firebase/local-data --export-on-exit=.firebase/local-data
+    stop_grace_period: 60s
     working_dir: /workspace
     volumes:
       - .:/workspace
@@ -16,6 +17,9 @@ services:
       GCLOUD_PROJECT: demo-unifood
     ports:
       - "127.0.0.1:4000:4000"
+      - "127.0.0.1:5001:5001"
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:9099:9099"
       - "${UNIFOOD_HOST:-127.0.0.1}:5001:5001"
       - "${UNIFOOD_HOST:-127.0.0.1}:8080:8080"
       - "${UNIFOOD_HOST:-127.0.0.1}:9099:9099"

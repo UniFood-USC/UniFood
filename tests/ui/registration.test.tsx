@@ -26,12 +26,13 @@ test('cada ojo muestra solo su contraseña y conserva el valor al volver a ocult
   expect(screen.getByLabelText('Contraseña').props.value).toBe('Demo1234');
 });
 
-test('ofrece iniciar sesión sin implementar T020 ni enviar el formulario', async () => {
+test('ofrece iniciar sesión sin enviar el formulario', async () => {
   const register = jest.fn<() => Promise<ServiceResponse>>();
-  await render(<RegistrationScreen register={register} />);
+  const onLogin = jest.fn();
+  await render(<RegistrationScreen register={register} onLogin={onLogin} />);
   expect(screen.getByText('¿Ya tienes una cuenta?')).toBeTruthy();
   await fireEvent.press(screen.getByRole('button', { name: 'Iniciar sesión' }));
-  expect(screen.getByText('El inicio de sesión estará disponible próximamente.')).toBeTruthy();
+  expect(onLogin).toHaveBeenCalledTimes(1);
   expect(register).not.toHaveBeenCalled();
 });
 
