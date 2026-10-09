@@ -257,6 +257,28 @@ Escanea el QR con Expo Go en Android o con la cámara en iPhone. Debe anunciar `
 
 Esta opción permite acceder a los emuladores desde la red elegida: úsala en una red privada de confianza, con datos ficticios. El panel de administración de Firebase sigue restringido al Mac en `localhost:4000`.
 
+### Ver la base de datos y los usuarios registrados
+
+Desde la carpeta UniFood, inicia los emuladores en Docker si no están encendidos:
+
+```sh
+docker compose up -d workspace
+docker compose logs -f workspace
+```
+
+Espera el mensaje `All emulators ready`. Puedes salir de los logs con `Ctrl+C`; los contenedores siguen funcionando.
+
+En el navegador **del Mac**, abre [Firebase Emulator Suite](http://localhost:4000):
+
+- **[Authentication](http://localhost:4000/auth):** muestra las cuentas registradas, su correo y su UID (identificador único).
+- **[Firestore](http://localhost:4000/firestore/default/data) → `users`:** abre el documento cuyo identificador coincide con el UID. Allí verás `name` (nombre), `email` (correo), `role` (rol) y `state` (estado). La contraseña no se guarda en este documento.
+
+Registrarse crea la cuenta y su perfil; iniciar sesión utiliza esa misma cuenta, sin duplicarla. Si la lista está vacía, registra una cuenta desde la app. Para cargar las cuatro cuentas ficticias de prueba puedes ejecutar `docker compose exec workspace npm run seed`; ten presente que el seed vuelve a dejar sus perfiles de prueba en estado activo.
+
+Estos datos pertenecen al proyecto local `demo-unifood`, dentro de Docker. **No se consultan en `console.firebase.google.com`** y no necesitas crear un proyecto en la nube para esta demo.
+
+Si la app abre en el teléfono pero el registro falla, comprueba que `.env` tenga `UNIFOOD_HOST=TU_IP_WIFI` y ejecuta `docker compose up -d workspace app`. Ambos servicios deben usar la misma IP; después recarga Expo Go. El Mac y el teléfono deben estar en la misma red Wi-Fi. Para conservar los datos, detén normalmente los emuladores como se explica en «Detener o volver al modo local».
+
 ### Problemas frecuentes al abrir Expo Go
 
 - **No conecta:** comprueba la misma Wi-Fi y la IP del Mac. Prueba `http://TU_IP_DEL_MAC:8081` en el navegador del teléfono. Redes de invitados/universidad pueden impedir comunicación entre dispositivos; usa una red privada que la permita. Revisa el permiso de red local de Expo Go en iOS y que el firewall permita los puertos de la demo.
@@ -276,7 +298,9 @@ docker compose down
 unset UNIFOOD_HOST
 ```
 
-Para abrir otra vez solo en el Mac, sigue el paso 2. Auth/Firestore son efímeros: sus datos desaparecen al detener los emuladores y se recrean con el seed. Las dependencias y la sesión Expo permanecen en volúmenes Docker. La suite de integración levanta sus propios emuladores aislados, sin modificar la demo abierta.
+Para abrir otra vez solo en el Mac, usa `export UNIFOOD_HOST=127.0.0.1` y sigue el paso 2. Puedes guardar `UNIFOOD_HOST=TU_IP_WIFI` en `.env` (excluido de Git) para que ambas partes mantengan la misma dirección entre terminales; actualízala si cambia la red. La variable exportada en la terminal tiene prioridad sobre `.env`.
+
+Auth/Firestore importan `.firebase/local-data` al arrancar y exportan allí al detenerse normalmente. Detén con `docker compose down` y espera a que termine; un cierre forzado puede perder cambios posteriores a la última exportación. Las dependencias y la sesión Expo permanecen en volúmenes Docker. La suite de integración levanta sus propios emuladores aislados, sin modificar la demo abierta.
 
 Identidades ficticias del seed: `demo-admin-1`, `demo-admin-2`, `demo-student` y `demo-restaurant`. Usan la contraseña de prueba `Demo1234`, exclusivamente en el proyecto emulado `demo-unifood`; no se envían correos. No hay configuración de un proyecto Firebase real.
 
@@ -291,12 +315,6 @@ Identidades ficticias del seed: `demo-admin-1`, `demo-admin-2`, `demo-student` y
 - `src/types/`: tipos compartidos del dominio.
 
 RF-25 y RF-26 son funciones que involucran varios roles; sus pantallas se ubican en el módulo del usuario correspondiente. Johan lidera RF-25 y Omar RF-26. Los cambios que requieran aportaciones de otro integrante se coordinan antes de editar los archivos compartidos.
-
-## Estado de la entrega hasta T019
-
-Base común con reloj controlable, contrato de respuestas, cliente de servicio, emuladores, cuatro identidades ficticias y reglas iniciales de acceso. Registro estudiantil conectado a Auth/Firestore: normaliza correo, valida dominio USC y contraseña, rechaza duplicados entre roles y altas concurrentes, y compensa fallos para no dejar perfiles huérfanos. El alta abre la sesión de la cuenta recién creada, sin exigir verificación de correo.
-
-La interfaz conserva el logo original, paleta cálida, controles accesibles y mensajes en español. La portada ofrece entradas de desarrollo para los tres roles; sus módulos continúan como contenedores sin datos privados. **T020 no está implementada:** no existe formulario ni operación de inicio de sesión por credenciales. Tampoco están implementados compra, pagos, avisos o administración completa. El registro aporta RF-01; la infraestructura prepara los demás RF sin declararlos terminados.
 
 ## Verificaciones
 

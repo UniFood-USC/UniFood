@@ -8,9 +8,9 @@ import { colors } from '../../constants/theme';
 import { validateRegistration, type RegistrationInput } from '../../domain/registration';
 import type { ServiceResponse } from '../../domain/response';
 
-type Props = { register: (input: RegistrationInput) => Promise<ServiceResponse>; onCreated?: () => void; onBack?: () => void };
+type Props = { register: (input: RegistrationInput) => Promise<ServiceResponse>; onCreated?: () => void; onBack?: () => void; onLogin?: () => void };
 const initial = { name: '', email: '', password: '', confirmPassword: '' };
-export default function RegistrationScreen({ register, onCreated, onBack }: Props) {
+export default function RegistrationScreen({ register, onCreated, onBack, onLogin }: Props) {
   const { width, height } = useWindowDimensions();
   const [fields, setFields] = useState(initial);
   const [pending, setPending] = useState(false);
@@ -18,7 +18,6 @@ export default function RegistrationScreen({ register, onCreated, onBack }: Prop
   const [created, setCreated] = useState(false);
   const [uncertain, setUncertain] = useState(false);
   const [visible, setVisible] = useState({ password: false, confirmPassword: false });
-  const [loginNotice, setLoginNotice] = useState(false);
   const sending = useRef(false);
   async function submit() {
     if (sending.current || created || uncertain) return;
@@ -84,12 +83,11 @@ export default function RegistrationScreen({ register, onCreated, onBack }: Prop
       {created && onCreated && <Pressable accessibilityRole="button" onPress={onCreated} style={styles.button}><Text style={styles.buttonText}>Continuar</Text></Pressable>}
       {!created && <View style={styles.signIn}>
         <Text style={styles.accountText}>¿Ya tienes una cuenta?</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel="Iniciar sesión" onPress={() => setLoginNotice(true)}
+        <Pressable accessibilityRole="button" accessibilityLabel="Iniciar sesión" onPress={onLogin}
           disabled={pending} accessibilityState={{ disabled: pending }} style={styles.signInLink}>
           <Text style={styles.link}>Iniciar sesión</Text>
         </Pressable>
       </View>}
-      {loginNotice && <Feedback state="empty" message="El inicio de sesión estará disponible próximamente." />}
       <View pointerEvents="none" style={{ height: Math.min(width, 480) * 0.38 }} />
       </SafeAreaView>
     </View>
