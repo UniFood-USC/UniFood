@@ -6,6 +6,7 @@ export const routes = {
   student: '/student',
   restaurant: '/restaurant',
   admin: '/admin',
+  orders: '/orders',
 
   // Estudiante
   orderTracking: (orderId: string) =>

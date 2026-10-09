@@ -5,8 +5,8 @@ import { colors } from '../../../constants/theme';
 import { routes } from '../../../constants/routes';
 import { Order } from '../../../types/domain';
 import { OrderStatusStepper } from './OrderStatusStepper';
-import { mockOrders } from './orderRepository';
-import { STATUS_FLOW, isTerminal, statusLabel } from './statusFlow';
+import { mockOrders, restaurantName } from '../../../services/orders/orderRepository';
+import { STATUS_FLOW, isTerminal, statusLabel } from '../../../services/orders/statusFlow';
 import { useOrderTracking } from './useOrderTracking';
 
 const fmt = (iso: string) =>
@@ -30,7 +30,7 @@ export default function OrderTrackingScreen({ orderId = 'UC1023' }: { orderId?: 
   const { order, error, loading } = useOrderTracking(mockOrders.repo, orderId);
   const late = useIsLate(order);
 
-  const goBack = () => (router.canGoBack() ? router.back() : router.replace(routes.student));
+  const goBack = () => (router.canGoBack() ? router.back() : router.replace(routes.orders));
 
   if (loading) {
     return <ActivityIndicator style={styles.center} color={colors.primary} accessibilityLabel="Cargando pedido" />;
@@ -52,6 +52,9 @@ export default function OrderTrackingScreen({ orderId = 'UC1023' }: { orderId?: 
         <View style={styles.headerTitle}>
           <Text accessibilityRole="header" style={styles.title}>Estado del pedido</Text>
           <Text style={styles.orderId}>#{order.id}</Text>
+          <Text style={styles.subtitle}>
+            {restaurantName(order.restaurantId)} · {order.mode === 'pickup' ? 'Recogida' : 'Entrega al salón'}
+          </Text>
         </View>
         <View style={styles.back} />
       </View>
@@ -84,7 +87,7 @@ export default function OrderTrackingScreen({ orderId = 'UC1023' }: { orderId?: 
         </>
       )}
 
-      {__DEV__ && <DevControls mode={order.mode} />}
+      {__DEV__ && <DevControls order={order} />}
     </ScrollView>
   );
 }
@@ -100,25 +103,22 @@ function Message({ text, onBack }: { text: string; onBack: () => void }) {
   );
 }
 
-// Solo desarrollo: simula al restaurante cambiando el estado
-function DevControls({ mode }: { mode: Order['mode'] }) {
+// Solo desarrollo: simula al restaurante cambiando el estado de este pedido
+function DevControls({ order }: { order: Order }) {
   return (
     <View style={styles.card}>
       <Text style={styles.detail}>Controles de prueba (solo desarrollo)</Text>
-      {STATUS_FLOW[mode].slice(1).map((s) => (
-        <Pressable key={s} accessibilityRole="button" style={styles.button} onPress={() => mockOrders.setStatus(s)}>
-          <Text style={styles.buttonText}>Simular: {statusLabel(s, mode)}</Text>
+      {STATUS_FLOW[order.mode].slice(1).map((s) => (
+        <Pressable key={s} accessibilityRole="button" style={styles.button} onPress={() => mockOrders.setStatus(order.id, s)}>
+          <Text style={styles.buttonText}>Simular: {statusLabel(s, order.mode)}</Text>
         </Pressable>
       ))}
       <Pressable
         accessibilityRole="button"
         style={styles.button}
-        onPress={() => mockOrders.patch({ status: 'cancelled', cancelledBy: 'restaurant', cancelReason: 'Producto agotado' })}
+        onPress={() => mockOrders.patch(order.id, { status: 'cancelled', cancelledBy: 'restaurant', cancelReason: 'Producto agotado' })}
       >
         <Text style={styles.buttonText}>Simular: cancelado</Text>
-      </Pressable>
-      <Pressable accessibilityRole="button" style={styles.button} onPress={() => mockOrders.toggleMode()}>
-        <Text style={styles.buttonText}>Cambiar modalidad ({mode === 'pickup' ? 'a entrega' : 'a recogida'})</Text>
       </Pressable>
     </View>
   );
@@ -133,6 +133,7 @@ const styles = StyleSheet.create({
   back: { width: 44, height: 44, justifyContent: 'center' },
   backText: { fontSize: 32, color: colors.ink, lineHeight: 36 },
   title: { fontSize: 20, fontWeight: '700', color: colors.ink },
+  subtitle: { fontSize: 14, color: colors.muted, marginTop: 2 },
   orderId: { fontSize: 20, fontWeight: '700', color: colors.ink },
   heading: { fontSize: 21, fontWeight: '600', color: colors.ink },
   notice: { padding: 18, borderRadius: 16, backgroundColor: colors.accent },
