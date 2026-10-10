@@ -4,7 +4,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { seedDemo } from '../../scripts/seed';
 import { emailKey } from '../../functions/src/identity';
-import { completeRecovery, generateRecoveryChallenge, requestRecovery } from '../../functions/src/recovery';
+import { brevoSender, completeRecovery, generateRecoveryChallenge, requestRecovery } from '../../functions/src/recovery';
 import { createClock } from '../../src/domain/clock';
 
 const base = 'http://127.0.0.1:5001/demo-unifood/us-central1/api';
@@ -130,4 +130,18 @@ test('los servicios públicos no exigen sesión ni exponen el secreto', async ()
   assert.equal(existing.codigo, 'OK');
   assert.equal(JSON.stringify(existing).includes('code'), false);
   assert.equal((await post('recovery/complete', change('demo-student', 'inventado'))).codigo, 'RECUPERACION_INVALIDA');
+});
+
+test('Brevo recibe destinatario, remitente y enlace; una respuesta de error se trata como fallo de envío', async () => {
+  const calls: { url: string; init: RequestInit }[] = [];
+  const fake = (status: number) => (async (url: string, init: RequestInit) => { calls.push({ url, init }); return new Response('{}', { status }); }) as typeof fetch;
+  await brevoSender('clave-prueba', 'remitente@example.test', fake(201))('destino@example.test', 'http://localhost:8081/reset?id=a&code=b');
+  assert.equal(calls[0].url, 'https://api.brevo.com/v3/smtp/email');
+  assert.equal((calls[0].init.headers as Record<string, string>)['api-key'], 'clave-prueba');
+  const body = JSON.parse(String(calls[0].init.body));
+  assert.deepEqual(body.to, [{ email: 'destino@example.test' }]);
+  assert.equal(body.sender.email, 'remitente@example.test');
+  assert.match(body.htmlContent, /href="http:\/\/localhost:8081\/reset\?id=a&code=b"/);
+  await assert.rejects(brevoSender('clave-mala', 'remitente@example.test', fake(401))('destino@example.test', 'enlace'));
+  assert.equal(process.env.BREVO_API_KEY || '', '', 'las pruebas nunca usan una clave real');
 });

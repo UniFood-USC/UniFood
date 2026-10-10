@@ -17,11 +17,28 @@ function matches(record: Challenge | undefined, secret: string, now: number) {
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
 
-// Sin proveedor de correo autorizado solo existe el remitente del emulador,
-// que escribe el enlace en su registro local. Fuera del emulador no hay remitente.
+// Brevo envía el correo real cuando hay clave y remitente verificado. Sin ellos,
+// el emulador escribe el enlace en su registro local y fuera de él no hay remitente.
+export function brevoSender(apiKey: string, from: string, send = fetch): RecoverySender {
+  return async (to, link) => {
+    const reply = await send('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': apiKey, 'Content-Type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({
+        sender: { name: 'UniFood', email: from },
+        to: [{ email: to }],
+        subject: 'Recupera tu contraseña de UniFood',
+        htmlContent: `<p>Recibimos una solicitud para cambiar tu contraseña.</p><p><a href="${link}">Crear una nueva contraseña</a></p><p>El enlace vence en 30 minutos y sirve una sola vez. Si no lo pediste, ignora este correo.</p>`,
+      }),
+    });
+    if (!reply.ok) throw new Error(`Brevo respondió ${reply.status}`);
+  };
+}
 const emulatorSender: RecoverySender = async (to, link) => { console.info(`Enlace de recuperación (solo emulador) para ${to}: ${link}`); };
-const configuredSender = process.env.FUNCTIONS_EMULATOR === 'true' ? emulatorSender : undefined;
-const linkBase = process.env.RECOVERY_LINK_BASE ?? 'unifood://reset';
+const { BREVO_API_KEY, BREVO_SENDER_EMAIL } = process.env;
+const configuredSender = BREVO_API_KEY && BREVO_SENDER_EMAIL ? brevoSender(BREVO_API_KEY, BREVO_SENDER_EMAIL)
+  : process.env.FUNCTIONS_EMULATOR === 'true' ? emulatorSender : undefined;
+const linkBase = process.env.RECOVERY_LINK_BASE || 'unifood://reset';
 
 export async function generateRecoveryChallenge(userId: string, clock = createClock()) {
   if (!validId(userId)) throw new Error('Cuenta no disponible.');
@@ -64,7 +81,7 @@ export async function requestRecovery(input: unknown, send = configuredSender, c
       const { secret } = await generateRecoveryChallenge(userId, clock);
       // Un fallo particular del destinatario no se publica ni registra el enlace.
       try { await send(user.email, `${linkBase}?id=${userId}&code=${secret}`); }
-      catch { console.error('No se pudo enviar la recuperación', { userId }); }
+      catch (error) { console.error('No se pudo enviar la recuperación', { userId, error: String(error) }); }
     }
   } catch { return failure; }
   return response('OK', 'Si existe una cuenta con ese correo, recibirás un enlace.');

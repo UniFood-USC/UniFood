@@ -340,7 +340,7 @@ Siempre quedan al menos dos administradores activos.
 
 ### Probar la recuperación de contraseña
 
-En local no se envían correos: el emulador escribe el enlace en su registro.
+Sin Brevo configurado no se envían correos: el emulador escribe el enlace en su registro.
 
 1. En la pantalla de inicio de sesión pulsa **¿Olvidaste tu contraseña?**, escribe por ejemplo `student@usc.edu.co` y envía. El mensaje es el mismo exista o no la cuenta.
 2. Busca el enlace en el registro:
@@ -349,10 +349,37 @@ En local no se envían correos: el emulador escribe el enlace en su registro.
    docker compose logs workspace | grep "Enlace de recuperación"
    ```
 
-3. El enlace empieza por `unifood://reset?id=…&code=…`. En el navegador abre `http://localhost:8081/reset?id=…&code=…`; en Expo Go, `exp://TU_IP_DEL_MAC:8081/--/reset?id=…&code=…`.
+3. Si no configuraste `RECOVERY_LINK_BASE`, el enlace empieza por `unifood://reset?id=…&code=…`. En el navegador abre `http://localhost:8081/reset?id=…&code=…`.
 4. Escribe la nueva contraseña dos veces. Al completar se cierran las sesiones abiertas y se accede con la nueva contraseña; la anterior deja de funcionar.
 
 El enlace vence a los 30 minutos, sirve una sola vez y pedir otro invalida el anterior. Una cuenta suspendida cambia la contraseña pero sigue bloqueada. Si el cambio no se completa, el mismo enlace puede reintentarse mientras siga vigente. El seed no restablece contraseñas: si cambias la de una cuenta de demo, recuérdala o vuelve a recuperarla con `Demo1234`.
+
+### Enviar correos reales con Brevo
+
+El plan gratuito de Brevo permite 300 correos al día. Los correos llevan la marca de Brevo. El envío sale desde el emulador local, sin desplegar en Firebase.
+
+1. Crea una cuenta gratuita en [Brevo](https://www.brevo.com/).
+2. En **Senders, Domains & Dedicated IPs → Senders** agrega la dirección remitente del equipo y confírmala desde el correo que te llega.
+3. En **SMTP & API → API Keys** genera una clave. Cópiala solo en tu `.env`; no la pegues en el chat, en commits ni en el README.
+4. Agrega estas líneas al `.env` de la carpeta UniFood (excluido de Git):
+
+   ```sh
+   BREVO_API_KEY=tu-clave
+   BREVO_SENDER_EMAIL=remitente-verificado@ejemplo.com
+   RECOVERY_LINK_BASE=http://localhost:8081/reset
+   ```
+
+   Para abrir el enlace desde el teléfono usa `RECOVERY_LINK_BASE=http://TU_IP_DEL_MAC:8081/reset`.
+5. Recrea los servicios para que lean el `.env`:
+
+   ```sh
+   docker compose up -d workspace app
+   ```
+
+6. Usa una cuenta cuyo correo sea un buzón real que controles. Las cuentas del seed son ficticias y no reciben correo. Un estudiante necesita un correo `@usc.edu.co`; un administrador puede crear otra cuenta administradora con cualquier dominio.
+7. Pide la recuperación desde la app y abre el enlace del correo recibido.
+
+Si el correo no llega, revisa el registro: `docker compose logs workspace | grep "No se pudo enviar"`. Un `401` indica una clave incorrecta y un `400`, un remitente sin verificar. La app sigue mostrando el mensaje genérico. Las pruebas de integración ignoran la clave y nunca envían correos reales.
 
 ## Verificaciones
 

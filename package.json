@@ -44,7 +44,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
     "test": "jest --runInBand",
-    "test:integration": "npm run build:service && firebase emulators:exec --project demo-unifood --only auth,firestore,functions 'tsx --test --test-concurrency=1 tests/integration/*.test.ts'",
+    "test:integration": "npm run build:service && BREVO_API_KEY= firebase emulators:exec --project demo-unifood --only auth,firestore,functions 'tsx --test --test-concurrency=1 tests/integration/*.test.ts'",
     "build:service": "tsc -p functions/tsconfig.json",
     "emulators": "npm run build:service && firebase emulators:start --project demo-unifood --only auth,firestore,functions",
     "seed": "tsx scripts/seed.ts"
