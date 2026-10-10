@@ -1,11 +1,8 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId
-        && resource.data.state == 'active';
-      allow write: if false;
-    }
+    // Los perfiles se consultan por /profile: allí se comprueba también
+    // la revocación en Auth, que estas reglas no pueden consultar directamente.
     match /{document=**} {
       allow read, write: if false;
     }

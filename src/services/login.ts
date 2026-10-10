@@ -12,7 +12,6 @@ type Dependencies = {
 };
 
 // Auth valida credenciales; el servicio decide el acceso con el perfil vigente.
-// La navegación y los controles de entrada/salida se conectan en T021.
 export async function login(input: unknown, dependencies: Dependencies = {
   firebase: localFirebase,
   checkIdentity: () => callService<LoginIdentity>('identity', {}),

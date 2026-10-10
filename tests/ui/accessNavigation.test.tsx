@@ -40,3 +40,17 @@ test.each(['student', 'restaurant', 'admin'] as const)('acceso %s, salida y reen
   await waitFor(() => expect(screen.getByTestId('pathname').props.children).toBe('/login'));
   expect(screen.queryByText('Lo que construiremos')).toBeNull();
 });
+
+test.each([
+  ['student', '/admin'], ['student', '/restaurant'], ['restaurant', '/student'],
+  ['restaurant', '/admin'], ['admin', '/student'], ['admin', '/restaurant'],
+] as const)('%s no puede abrir %s', async (role, target) => {
+  jest.mocked(login).mockResolvedValue(response('OK', 'Sesión iniciada.', { id: `demo-${role}`, role, state: 'active' }));
+  await renderRouter(routes, { initialUrl: '/login' });
+  await fireEvent.changeText(screen.getByLabelText('Correo electrónico'), 'demo@example.test');
+  await fireEvent.changeText(screen.getByLabelText('Contraseña'), 'Demo1234');
+  await fireEvent.press(screen.getByRole('button', { name: 'Iniciar sesión' }));
+  await waitFor(() => expect(screen.getByTestId('pathname').props.children).toBe(`/${role}`));
+  await act(() => router.push(target));
+  await waitFor(() => expect(screen.getByTestId('pathname').props.children).toBe(`/${role}`));
+});
