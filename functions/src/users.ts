@@ -88,8 +88,8 @@ export async function updateUserContact(authorization: string | undefined, input
   }
 }
 
-// Pieza interna de T026. No se publica una acción de suspensión general hasta
-// integrar cancelaciones/reembolsos (T115–T119).
+// Pieza interna. No se publica una acción de suspensión general hasta
+// integrar cancelaciones y reembolsos.
 export async function deactivateAdministrator(authorization: string | undefined, id: string) {
   const actor = await checkedIdentity(authorization, {});
   if (actor.role !== 'admin') return response('NO_AUTORIZADO', 'Solo un administrador puede gestionar cuentas.');

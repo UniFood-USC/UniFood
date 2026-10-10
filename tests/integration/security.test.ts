@@ -20,7 +20,7 @@ async function token(email: string) {
 const account = (email: string, role = 'admin') => ({ name: 'Cuenta de prueba', email, role, password: 'Demo1234', confirmPassword: 'Demo1234' });
 before(async () => { assert.equal(process.env.GCLOUD_PROJECT, 'demo-unifood'); await seedDemo(); });
 
-test('T022: un token emitido antes de revocar ya no permite la siguiente operación', async () => {
+test('un token emitido antes de revocar ya no permite la siguiente operación', async () => {
   const old = await token('admin1@usc.edu.co');
   assert.equal((await post('identity', {}, old)).codigo, 'OK');
   // Firebase compara auth_time con precisión de segundos.
@@ -32,7 +32,7 @@ test('T022: un token emitido antes de revocar ya no permite la siguiente operaci
   assert.equal((await post('identity', {}, await token('admin1@usc.edu.co'))).codigo, 'OK');
 });
 
-test('T023: perfil propio permitido, consulta de otro rol o propietario rechazada', async () => {
+test('perfil propio permitido, consulta de otro rol o propietario rechazada', async () => {
   for (const [email, id] of [['student@usc.edu.co', 'demo-student'], ['restaurant@example.test', 'demo-restaurant'], ['admin2@example.test', 'demo-admin-2']]) {
     const session = await token(email);
     const own = await post('profile', { id }, session);
@@ -44,7 +44,7 @@ test('T023: perfil propio permitido, consulta de otro rol o propietario rechazad
   assert.equal((await post('profile', { id: 'demo-student' })).codigo, 'SESION_REQUERIDA');
 });
 
-test('T024: solo administrador activo crea cuentas, sin entregar token de la cuenta nueva', async () => {
+test('solo administrador activo crea cuentas, sin entregar token de la cuenta nueva', async () => {
   const input = account('nuevo-admin@example.test');
   assert.equal((await post('users/create', input)).codigo, 'SESION_REQUERIDA');
   for (const email of ['student@usc.edu.co', 'restaurant@example.test']) {
@@ -60,7 +60,7 @@ test('T024: solo administrador activo crea cuentas, sin entregar token de la cue
   assert.equal((await getFirestore().doc(`users/${created.datos.profile.id}`).get()).data()?.role, 'admin');
 });
 
-test('T024: estudiante exige USC, rol inválido y campos de privilegio se rechazan', async () => {
+test('estudiante exige USC, rol inválido y campos de privilegio se rechazan', async () => {
   const admin = await token('admin2@example.test');
   for (const input of [account('externo@example.test', 'student'), account('rol@example.test', 'restaurant'), { ...account('estado@example.test'), state: 'active' }]) {
     assert.equal((await post('users/create', input, admin)).codigo, 'VALIDACION');
@@ -72,7 +72,7 @@ test('T024: estudiante exige USC, rol inválido y campos de privilegio se rechaz
   assert.equal(created.datos.profile.role, 'student');
 });
 
-test('T024: duplicados concurrentes y entre roles no crean perfiles huérfanos', async () => {
+test('duplicados concurrentes y entre roles no crean perfiles huérfanos', async () => {
   const admin = await token('admin2@example.test');
   const results = await Promise.all([post('users/create', account('unico@usc.edu.co'), admin), post('users/create', account('unico@usc.edu.co', 'student'), admin)]);
   assert.deepEqual(results.map(r => r.codigo).sort(), ['CORREO_EN_USO', 'OK']);
@@ -80,7 +80,7 @@ test('T024: duplicados concurrentes y entre roles no crean perfiles huérfanos',
   assert.equal((await post('users/create', account('student@usc.edu.co'), admin)).codigo, 'CORREO_EN_USO');
 });
 
-test('T024: administrador suspendido no crea cuentas', async () => {
+test('administrador suspendido no crea cuentas', async () => {
   const admin = await token('admin2@example.test');
   const ref = getFirestore().doc('users/demo-admin-2');
   await ref.update({ state: 'suspended' });
@@ -89,7 +89,7 @@ test('T024: administrador suspendido no crea cuentas', async () => {
   await assert.rejects(getAuth().getUserByEmail('bloqueado@example.test'));
 });
 
-test('T023: consultas directas no exponen perfiles ajenos, listados ni pedidos privados', async () => {
+test('consultas directas no exponen perfiles ajenos, listados ni pedidos privados', async () => {
   const { initializeTestEnvironment, assertFails } = await import('@firebase/rules-unit-testing');
   const { doc, getDoc, collection, getDocs } = await import('firebase/firestore');
   const env = await initializeTestEnvironment({ projectId: 'demo-unifood' });

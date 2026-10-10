@@ -15,7 +15,7 @@ async function login(email: string, password = 'Demo1234') {
 const account = (email: string, role = 'student') => ({ name: 'Cuenta prueba', email, role, password: 'Demo1234', confirmPassword: 'Demo1234' });
 before(async () => { assert.equal(process.env.GCLOUD_PROJECT, 'demo-unifood'); await seedDemo(); });
 
-test('T025/T027: listado y edición privados; correo sincronizado, rol fijo y versión protegida', async () => {
+test('listado y edición privados; correo sincronizado, rol fijo y versión protegida', async () => {
   const admin = (await login('admin1@usc.edu.co')).idToken;
   const created = await post('users/create', account('edicion@usc.edu.co'), admin);
   const id = created.datos.profile.id;
@@ -47,7 +47,7 @@ test('T025/T027: listado y edición privados; correo sincronizado, rol fijo y ve
   assert.equal((await post('users/create', account('edicion@usc.edu.co'), admin)).codigo, 'OK');
 });
 
-test('T025: dos cuentas no pueden editarse al mismo correo', async () => {
+test('dos cuentas no pueden editarse al mismo correo', async () => {
   const token = (await login('admin1@usc.edu.co')).idToken;
   const a = await post('users/create', account('race-a@usc.edu.co'), token);
   const b = await post('users/create', account('race-b@usc.edu.co'), token);
@@ -55,7 +55,7 @@ test('T025: dos cuentas no pueden editarse al mismo correo', async () => {
   assert.deepEqual(results.map(r => r.codigo).sort(), ['CORREO_EN_USO', 'OK']);
 });
 
-test('T026: dos desactivaciones concurrentes preservan dos administradores y el contador', async () => {
+test('dos desactivaciones concurrentes preservan dos administradores y el contador', async () => {
   const db = getFirestore();
   const admin = (await login('admin1@usc.edu.co')).idToken;
   // Aislar la invariante de administradores creados por otras pruebas.
@@ -72,7 +72,7 @@ test('T026: dos desactivaciones concurrentes preservan dos administradores y el 
   await seedDemo();
 });
 
-test('T029: actualización aislada de contraseña revoca sesiones y conserva suspensión', async () => {
+test('actualización aislada de contraseña revoca sesiones y conserva suspensión', async () => {
   const auth = getAuth(), db = getFirestore();
   const user = await auth.createUser({ email: 'recovery-proof@usc.edu.co', password: 'Anterior123' });
   await db.doc(`users/${user.uid}`).set({ id: user.uid, role: 'student', state: 'active' });
@@ -91,7 +91,7 @@ test('T029: actualización aislada de contraseña revoca sesiones y conserva sus
   assert.ok((await login('recovery-proof@usc.edu.co', 'Otra12345')).error);
 });
 
-test('T030: huella privada, 30 minutos exactos y sustitución incluso concurrente', async () => {
+test('huella privada, 30 minutos exactos y sustitución incluso concurrente', async () => {
   let now = Date.parse('2026-10-09T12:00:00Z');
   const clock = createClock(() => now);
   const first = await generateRecoveryChallenge('demo-student', clock);
@@ -112,7 +112,7 @@ test('T030: huella privada, 30 minutos exactos y sustitución incluso concurrent
   await assert.rejects(generateRecoveryChallenge('missing-user', clock));
 });
 
-test('T026: un alta incompleta no cuenta como administrador disponible', async () => {
+test('un alta incompleta no cuenta como administrador disponible', async () => {
   const db = getFirestore();
   const existing = await db.collection('users').where('role', '==', 'admin').get();
   for (const doc of existing.docs) if (!['demo-admin-1','demo-admin-2'].includes(doc.id)) await doc.ref.update({ state: 'suspended' });
@@ -123,7 +123,7 @@ test('T026: un alta incompleta no cuenta como administrador disponible', async (
   finally { await db.doc('users/admin-incompleto').delete(); }
 });
 
-test('T025: reconcilia una edición confirmada en Auth sin duplicarla y rechaza otra mientras está pendiente', async () => {
+test('reconcilia una edición confirmada en Auth sin duplicarla y rechaza otra mientras está pendiente', async () => {
   const db = getFirestore();
   const token = (await login('admin1@usc.edu.co')).idToken;
   const created = await post('users/create', account('interrumpida@usc.edu.co'), token);
@@ -138,7 +138,7 @@ test('T025: reconcilia una edición confirmada en Auth sin duplicarla y rechaza 
   assert.equal((await db.doc(`users/${id}`).get()).data()?.version, 2);
 });
 
-test('T030: desafíos y control administrativo no se leen ni escriben desde el cliente', async () => {
+test('desafíos y control administrativo no se leen ni escriben desde el cliente', async () => {
   const { initializeTestEnvironment, assertFails } = await import('@firebase/rules-unit-testing');
   const { getDoc, setDoc, doc } = await import('firebase/firestore');
   const env = await initializeTestEnvironment({ projectId: 'demo-unifood' });

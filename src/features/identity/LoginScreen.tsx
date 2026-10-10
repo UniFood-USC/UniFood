@@ -11,9 +11,10 @@ import type { ServiceResponse } from '../../domain/response';
 type Props = {
   signIn: (input: { email: string; password: string }) => Promise<ServiceResponse<LoginIdentity>>;
   onRegister: () => void;
+  onRecover?: () => void;
   sessionMessage?: string;
 };
-export default function LoginScreen({ signIn, onRegister, sessionMessage }: Props) {
+export default function LoginScreen({ signIn, onRegister, onRecover, sessionMessage }: Props) {
   const { width, height } = useWindowDimensions();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -56,6 +57,8 @@ export default function LoginScreen({ signIn, onRegister, sessionMessage }: Prop
             <Pressable accessibilityRole="button" accessibilityLabel={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
               onPress={() => setVisible(!visible)} style={styles.eye}><Feather name={visible ? 'eye-off' : 'eye'} size={22} color={colors.muted} accessible={false} /></Pressable>
           </View>
+          {onRecover && <Pressable accessibilityRole="button" accessibilityLabel="¿Olvidaste tu contraseña?" disabled={pending}
+            onPress={onRecover} style={[styles.linkButton, styles.forgot]}><Text style={styles.link}>¿Olvidaste tu contraseña?</Text></Pressable>}
           {!!(message || sessionMessage) && <Feedback state="error" message={message || sessionMessage!} />}
           {pending && <Feedback state="loading" message="Comprobando tu cuenta…" />}
           <Pressable accessibilityRole="button" accessibilityLabel={pending ? 'Iniciando sesión' : 'Iniciar sesión'}
@@ -84,5 +87,5 @@ const styles = StyleSheet.create({
   button: { minHeight: 56, padding: 14, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F56A25', borderRadius: 24, marginTop: 8 },
   buttonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 20 }, dimmed: { opacity: 0.65 },
   signUp: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', columnGap: 6 },
-  text: { color: colors.muted, fontSize: 15 }, linkButton: { minHeight: 44, justifyContent: 'center' }, link: { color: colors.primary, fontSize: 15, fontWeight: '600' },
+  text: { color: colors.muted, fontSize: 15 }, linkButton: { minHeight: 44, justifyContent: 'center' }, forgot: { alignSelf: 'flex-end', marginTop: -8 }, link: { color: colors.primary, fontSize: 15, fontWeight: '600' },
 });

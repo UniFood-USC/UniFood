@@ -316,19 +316,17 @@ Identidades ficticias del seed: `demo-admin-1`, `demo-admin-2`, `demo-student` y
 
 RF-25 y RF-26 son funciones que involucran varios roles; sus pantallas se ubican en el módulo del usuario correspondiente. Johan lidera RF-25 y Omar RF-26. Los cambios que requieran aportaciones de otro integrante se coordinan antes de editar los archivos compartidos.
 
-## Estado de la entrega hasta T030
+### Servicios privados
 
-Base común con reloj controlable, contrato de respuestas, cliente de servicio, emuladores, cuatro identidades ficticias y reglas iniciales de acceso. Registro estudiantil conectado a Auth/Firestore: normaliza correo, valida dominio USC y contraseña, rechaza duplicados entre roles y altas concurrentes, y compensa fallos para no dejar perfiles huérfanos. El alta abre la sesión de la cuenta recién creada, sin exigir verificación de correo.
+Los perfiles se consultan con `POST /profile`, token de sesión y `{ "id": "UID_PROPIO" }`. Las lecturas directas a Firestore desde la app están bloqueadas, incluso para el propio perfil; todo pasa por el servicio, que comprueba sesión, revocación y rol. El panel local de Firebase sí muestra los datos. En la app se usa `callService('<acción>', input)`.
 
-La interfaz conserva el logo original, paleta cálida, controles accesibles y mensajes en español. **T020–T021 implementadas:** la app abre el formulario de inicio de sesión; correo y contraseña se comprueban con Firebase y el servicio determina el rol y estado vigente. Cada cuenta llega a su entrada de estudiante, restaurante o administrador. **Cerrar sesión**, en el encabezado del módulo, retira la vista privada; volver requiere autenticarse otra vez. El registro y el acceso están enlazados. La sesión es en memoria, por lo que recargar o reabrir puede exigir nuevo acceso. Puedes probar con las cuentas ficticias del seed, por ejemplo `student@usc.edu.co` y contraseña `Demo1234`.
-
-Los módulos continúan en preparación: compra, pagos, avisos y administración completa siguen pendientes. **T022–T024 implementadas:** las operaciones privadas comprueban revocación de sesión, los accesos están aislados por rol y existe alta administrativa mediante servicio. Verificación actual en Docker: **79 pruebas de dominio/interfaz y navegación, 31 de integración, lint y tipos aprobados**. Revisión visual realizada en web; pruebas manuales en Android/iOS pendientes.
-
-### Alta administrativa y consultas privadas
-
-El servicio `POST /users/create` requiere el token de un administrador activo y acepta `name`, `email`, `password`, `confirmPassword` y `role` (`admin` o `student`). Para estudiantes exige correo `@usc.edu.co`. Devuelve el perfil creado sin contraseña ni token, manteniendo la sesión del administrador. **T025–T028 implementadas:** al iniciar sesión como administrador se abre el listado de usuarios; **Crear usuario** permite dar de alta estudiantes y administradores. **Editar** permite cambiar nombre y correo, conservando el rol. La edición valida dominio institucional y correo único, sincroniza Authentication/Firestore y rechaza versiones desactualizadas.
-
-Los perfiles se consultan con `POST /profile`, token de sesión y `{ "id": "UID_PROPIO" }`. Las consultas privadas directas a Firestore están bloqueadas, incluso para el propio perfil: deben pasar por el servicio que comprueba revocación y permisos. Esto no impide ver los datos desde el panel local de Firebase descrito arriba. Los consumidores de la app usan `callService('profile', input)` o `callService('users/create', input)`.
+| Servicio | Quién | Datos |
+| --- | --- | --- |
+| `POST /users/create` | Administrador activo | `name`, `email`, `password`, `confirmPassword`, `role` (`admin` o `student`; estudiante exige `@usc.edu.co`) |
+| `POST /users/list` | Administrador activo | — |
+| `POST /users/update` | Administrador activo | `id`, `version` (del listado), `name`, `email`; el rol no se edita |
+| `POST /recovery/request` | Sin sesión | `email` |
+| `POST /recovery/complete` | Sin sesión | `id`, `code`, `password`, `confirmPassword` |
 
 ### Probar la gestión de usuarios
 
@@ -336,13 +334,25 @@ Los perfiles se consultan con `POST /profile`, token de sesión y `{ "id": "UID_
 2. En Expo Go o web, inicia sesión con `admin1@usc.edu.co` o `admin2@example.test`, contraseña `Demo1234`.
 3. Pulsa **Crear usuario**, completa nombre, correo, tipo de cuenta y contraseña. El resultado aparece en la pantalla y el usuario se incorpora al listado.
 4. Pulsa **Editar** en una cuenta, modifica nombre/correo y guarda. El rol no se puede cambiar. Si cambias el correo, el siguiente acceso usa el nuevo.
-5. Si aparece un conflicto de versión, vuelve al listado y abre la edición actualizada. Ante desconexión se conserva lo escrito mientras la pantalla siga abierta; el reintento es manual. Un resultado pendiente requiere verificar la operación antes de afirmar que falló.
+5. Si aparece un conflicto de versión, vuelve al listado y abre la edición actualizada. Ante desconexión se conserva lo escrito mientras la pantalla siga abierta; el reintento es manual.
 
-Los endpoints `POST /users/list` y `POST /users/update` exigen administrador activo. La edición admite únicamente `id`, `version`, `name` y `email`; la versión se obtiene del listado. El correo anterior queda reservado hasta confirmar la sincronización. Una edición pendiente que ya llegó a Auth puede completarse reintentando los mismos datos; si la interrupción dejó Auth sin actualizar, permanece bloqueada para revisión, sin sobrescribir otra edición.
+Siempre quedan al menos dos administradores activos.
 
-**T026:** protección transaccional de al menos dos administradores activos, incluidas carreras y altas aún incompletas. Es una pieza interna; los controles de suspensión/eliminación y sus efectos sobre pedidos siguen pendientes de T115–T119.
+### Probar la recuperación de contraseña
 
-**T029–T030 (RF-03, parcial):** prueba aislada de cambio de contraseña y revocación, sin reactivar suspendidos; desafío privado con secreto aleatorio, solo huella SHA-256 persistida, vencimiento a los 30 minutos y sustitución del anterior. No hay todavía formulario, envío de correo ni consumo del desafío. T031 no iniciada. Revisión visual web a 390 × 844; no sustituye pruebas físicas Android/iOS.
+En local no se envían correos: el emulador escribe el enlace en su registro.
+
+1. En la pantalla de inicio de sesión pulsa **¿Olvidaste tu contraseña?**, escribe por ejemplo `student@usc.edu.co` y envía. El mensaje es el mismo exista o no la cuenta.
+2. Busca el enlace en el registro:
+
+   ```sh
+   docker compose logs workspace | grep "Enlace de recuperación"
+   ```
+
+3. El enlace empieza por `unifood://reset?id=…&code=…`. En el navegador abre `http://localhost:8081/reset?id=…&code=…`; en Expo Go, `exp://TU_IP_DEL_MAC:8081/--/reset?id=…&code=…`.
+4. Escribe la nueva contraseña dos veces. Al completar se cierran las sesiones abiertas y se accede con la nueva contraseña; la anterior deja de funcionar.
+
+El enlace vence a los 30 minutos, sirve una sola vez y pedir otro invalida el anterior. Una cuenta suspendida cambia la contraseña pero sigue bloqueada. Si el cambio no se completa, el mismo enlace puede reintentarse mientras siga vigente. El seed no restablece contraseñas: si cambias la de una cuenta de demo, recuérdala o vuelve a recuperarla con `Demo1234`.
 
 ## Verificaciones
 

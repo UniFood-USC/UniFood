@@ -3,11 +3,11 @@ import { localFirebase } from './firebase';
 import { signOut } from 'firebase/auth';
 
 // Un solo intento por llamada: una desconexión no demuestra que la mutación falló.
-export async function callService<T = unknown>(action: 'register' | 'identity' | 'profile' | 'users/create' | 'users/list' | 'users/update', input: unknown): Promise<ServiceResponse<T>> {
+export async function callService<T = unknown>(action: 'register' | 'recovery/request' | 'recovery/complete' | 'identity' | 'profile' | 'users/create' | 'users/list' | 'users/update', input: unknown): Promise<ServiceResponse<T>> {
   const { auth, baseUrl, ready } = localFirebase();
   await ready;
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (action !== 'register') {
+  if (!['register', 'recovery/request', 'recovery/complete'].includes(action)) {
     if (!auth.currentUser) return response('SESION_REQUERIDA', 'Se requiere una sesión válida.');
     try { headers.Authorization = `Bearer ${await auth.currentUser.getIdToken()}`; }
     catch (error) {

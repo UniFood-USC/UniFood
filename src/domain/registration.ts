@@ -16,10 +16,14 @@ export function validateContact(input: unknown, role: UserRole) {
 
 export function validateRegistration(input: unknown, role: UserRole) {
   const contact = validateContact(input, role);
-  const data = input as Record<string, unknown>;
+  return { ...contact, password: validatePassword(input) };
+}
+
+export function validatePassword(input: unknown) {
+  const data = (input ?? {}) as Record<string, unknown>;
   if (typeof data.password !== 'string' || data.password.length < 8 || !/\p{L}/u.test(data.password) || !/[0-9]/.test(data.password)) {
     throw new Error('La contraseña debe tener al menos 8 caracteres, una letra y un número.');
   }
   if (data.password !== data.confirmPassword) throw new Error('Las contraseñas no coinciden.');
-  return { ...contact, password: data.password };
+  return data.password;
 }

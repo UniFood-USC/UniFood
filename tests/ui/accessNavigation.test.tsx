@@ -44,7 +44,7 @@ test.each(['student', 'restaurant', 'admin'] as const)('acceso %s, salida y reen
 test.each([
   ['student', '/admin'], ['student', '/restaurant'], ['restaurant', '/student'],
   ['restaurant', '/admin'], ['admin', '/student'], ['admin', '/restaurant'],
-] as const)('T023: %s no puede abrir %s', async (role, target) => {
+] as const)('%s no puede abrir %s', async (role, target) => {
   jest.mocked(login).mockResolvedValue(response('OK', 'Sesión iniciada.', { id: `demo-${role}`, role, state: 'active' }));
   await renderRouter(routes, { initialUrl: '/login' });
   await fireEvent.changeText(screen.getByLabelText('Correo electrónico'), 'demo@example.test');

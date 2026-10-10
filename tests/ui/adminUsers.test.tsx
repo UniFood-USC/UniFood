@@ -3,7 +3,7 @@ import UsersScreen from '../../src/features/admin/UsersScreen';
 import { response } from '../../src/domain/response';
 
 const user = { id: 'student', name: 'Estudiante Demo', email: 'student@usc.edu.co', role: 'student', state: 'active', version: 1 };
-test('T027/T028: lista, edita nombre/correo y conserva rol sin selector en edición', async () => {
+test('lista, edita nombre/correo y conserva rol sin selector en edición', async () => {
   const service = jest.fn().mockResolvedValueOnce(response('OK', 'Listado', { users: [user] })).mockResolvedValueOnce(response('OK', 'Datos guardados.', { ...user, name: 'Nombre nuevo', version: 2 })).mockResolvedValue(response('OK', 'Listado', { users: [{ ...user, name: 'Nombre nuevo', version: 2 }] }));
   await render(<UsersScreen service={service} />);
   await fireEvent.press(await screen.findByRole('button', { name: 'Editar Estudiante Demo' }));
@@ -14,7 +14,7 @@ test('T027/T028: lista, edita nombre/correo y conserva rol sin selector en edici
   expect(service).toHaveBeenCalledWith('users/update', { id: 'student', version: 1, name: 'Nombre nuevo', email: 'student@usc.edu.co' });
 });
 
-test('T027: crea administrador, muestra resultado y limpia contraseña', async () => {
+test('crea administrador, muestra resultado y limpia contraseña', async () => {
   const service = jest.fn().mockResolvedValue(response('OK', 'Listado', { users: [] }));
   await render(<UsersScreen service={service} />);
   await fireEvent.press(await screen.findByRole('button', { name: 'Crear usuario' }));
@@ -30,7 +30,7 @@ test('T027: crea administrador, muestra resultado y limpia contraseña', async (
   expect(screen.queryByLabelText('Contraseña')).toBeNull();
 });
 
-test('T028: desconexión conserva edición y permite reintento manual', async () => {
+test('desconexión conserva edición y permite reintento manual', async () => {
   const service = jest.fn().mockResolvedValueOnce(response('OK', 'Listado', { users: [user] })).mockRejectedValue(new Error('network'));
   await render(<UsersScreen service={service} />);
   await fireEvent.press(await screen.findByRole('button', { name: 'Editar Estudiante Demo' }));
@@ -41,7 +41,7 @@ test('T028: desconexión conserva edición y permite reintento manual', async ()
   expect(service).toHaveBeenCalledTimes(2);
 });
 
-test('T027: muestra error de listado y reintenta solo al pulsar', async () => {
+test('muestra error de listado y reintenta solo al pulsar', async () => {
   const service = jest.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValue(response('OK', 'Listado', { users: [] }));
   await render(<UsersScreen service={service} />);
   await fireEvent.press(await screen.findByRole('button', { name: 'Reintentar' }));
@@ -49,7 +49,7 @@ test('T027: muestra error de listado y reintenta solo al pulsar', async () => {
   expect(service).toHaveBeenCalledTimes(2);
 });
 
-test('T028: bloquea doble envío y conserva el formulario ante conflicto', async () => {
+test('bloquea doble envío y conserva el formulario ante conflicto', async () => {
   let finish!: (result: ReturnType<typeof response>) => void;
   const service = jest.fn().mockResolvedValueOnce(response('OK', 'Listado', { users: [user] })).mockImplementation(() => new Promise(resolve => { finish = resolve; }));
   await render(<UsersScreen service={service} />);
