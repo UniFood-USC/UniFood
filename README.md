@@ -23,167 +23,9 @@ El trabajo se organiza en **26 requerimientos funcionales (RF)** dentro del [tab
 - **Nahia Yesenia Montoya Sánchez — [Nahia-24](https://github.com/Nahia-24):** RF-11, RF-13–RF-15, RF-18–RF-20 y RF-23. Seguimiento, historial, valoraciones, preparación, estados, ventas y reportes.
 - **Johan Sebastián Orejuela Mina — [HAKAIEx](https://github.com/HAKAIEx):** RF-04–RF-06, RF-16, RF-22, RF-24 y RF-25. Listado y búsqueda de restaurantes, consulta y gestión del menú, administración de restaurantes, promociones y entrega al salón.
 
-Cada RF tiene un responsable principal: En entregas y programación, Johan lidera la entrega al salón y aporta destinos, cobertura, horarios y cupos; Omar integra compra, pagos y avisos; Nahia gestiona los estados y la cancelación de pedidos. Las aportaciones de cada persona se indican dentro de la tarjeta correspondiente.
-
-### Cómo colaborar
-
-- Usar «My items» para consultar los requerimientos asignados y marcar sus tareas internas a medida que se verifican.
-- Mover la tarjeta a «In progress» al comenzar y a «Done» cuando se cumplan todos sus criterios y la entrega esté integrada.
-- Trabajar en ramas propias y realizar entregas pequeñas; recibir las dependencias de otros compañeros antes de cerrar una integración.
-- Cada integrante mantiene sus módulos. Omar coordina los archivos comunes de navegación, configuración, dependencias y componentes compartidos; los cambios necesarios se acuerdan antes de editar para evitar cruces.
-
-### Git: trabajo diario del equipo
-
-Cada persona trabaja en una rama por entrega o RF. `main` recibe los cambios mediante un Pull Request (PR) revisado por otro integrante. Las ramas separan el trabajo, pero no evitan conflictos si dos personas editan el mismo archivo: acuerden primero los cambios en archivos compartidos.
-
-Los nombres siguientes son ejemplos; cambien el RF y la descripción para cada entrega. En los comandos, sustituyan `MI_RAMA` por su rama y `RUTA_ARCHIVO` por un archivo concreto. No ejecuten los tres ejemplos de creación de rama: cada integrante usa el suyo.
-
-| Integrante | Ejemplo de rama | Crear después de actualizar `main` |
-| --- | --- | --- |
-| Omar | `omar/rf-07-carrito` | `git switch -c omar/rf-07-carrito` |
-| Nahia | `nahia/rf-11-seguimiento` | `git switch -c nahia/rf-11-seguimiento` |
-| Johan | `johan/rf-25-entrega-salon` | `git switch -c johan/rf-25-entrega-salon` |
-
-**1. Empezar una entrega.** Primero revisen `git status`: si hay cambios pendientes, guárdenlos con un commit en su rama o usen el apartado de guardado temporal antes de cambiar de rama.
-
-```sh
-git status
-git switch main
-git pull --ff-only origin main
-```
-
-Ahora ejecuten el comando de creación de su fila. Para retomar una rama que ya existe, usen `git switch MI_RAMA`, sin `-c`.
-
-**2. Guardar un avance.** Revisen lo que van a incluir y agreguen únicamente los archivos de esa entrega. Repitan `git add` para cada archivo necesario.
-
-```sh
-git status
-git diff
-git add -- RUTA_ARCHIVO
-git diff --cached
-git commit -m "RF-XX: describir el avance realizado"
-```
-
-**3. Recibir los cambios del equipo y publicar.** Desde su rama, con los cambios guardados y `git status` limpio:
-
-```sh
-git fetch origin
-git merge origin/main
-docker compose run --rm workspace npm run lint
-docker compose run --rm workspace npm run typecheck
-git push -u origin MI_RAMA
-```
-
-Si aparece un conflicto, resuélvanlo antes de seguir. Publiquen cuando las verificaciones pasen y comprueben también el funcionamiento de las pantallas modificadas. Después del primer envío, basta `git push`.
-
-**4. Integrar.** En GitHub, abran un PR desde su rama hacia `main`, enlacen la tarjeta RF y expliquen qué hicieron y cómo lo probaron. Otro integrante revisa; los conflictos se resuelven en la rama de trabajo. Cuando esté aprobado y comprobado, intégrenlo desde GitHub. Marquen el RF como Done solo cuando todos sus criterios estén cumplidos; un PR parcial no cierra todo el RF.
-
-**5. Empezar la siguiente entrega.** Con el trabajo anterior integrado y sin cambios locales pendientes:
-
-```sh
-git switch main
-git pull --ff-only origin main
-```
-
-Creen una rama nueva para la siguiente entrega. No hagan `push` directo a `main` ni usen `push --force` para resolver un rechazo.
-
-### Git: problemas comunes
-
-**Hay cambios sin guardar y Git impide cambiar de rama o actualizar.** Guarden temporalmente el trabajo; `-u` incluye archivos nuevos, pero no archivos ignorados:
-
-```sh
-git stash push -u -m "Avance temporal antes de actualizar"
-git status
-```
-
-Realicen la actualización necesaria. Regresen a la rama donde estaban trabajando y recuperen el guardado correcto:
-
-```sh
-git switch MI_RAMA
-git stash list
-git stash apply 'stash@{0}'
-git status
-```
-
-`stash@{0}` es el guardado más reciente: verifiquen su mensaje antes de aplicarlo. El guardado se conserva; después de comprobar y hacer commit del trabajo recuperado, pueden eliminar esa entrada con `git stash drop 'stash@{0}'`. Si `apply` produce conflictos, resuelvan los archivos y hagan un commit normal; no ejecuten `git merge --continue`, porque no hay una fusión en curso.
-
-**Aparece `CONFLICT` al ejecutar `git merge`.** Identifiquen los archivos afectados:
-
-```sh
-git status
-git diff --name-only --diff-filter=U
-```
-
-Abran cada archivo, combinen los cambios necesarios y eliminen las marcas `<<<<<<<`, `=======` y `>>>>>>>`. Acuerden con el compañero el resultado si ambas versiones modifican el mismo comportamiento. Si uno eliminó un archivo y otro lo modificó, decidan si conservarlo (`git add`) o confirmar su eliminación (`git rm -- RUTA_ARCHIVO`). No acepten todos los cambios de un lado sin revisarlos.
-
-```sh
-git add -- RUTA_ARCHIVO
-git diff --check
-git diff --cached
-docker compose run --rm workspace npm run lint
-docker compose run --rm workspace npm run typecheck
-git merge --continue
-git push
-```
-
-Repitan `git add` por cada archivo resuelto. Continúen solo cuando `git status` ya no muestre archivos sin resolver. `git merge --continue` puede abrir el editor del mensaje: guárdenlo y ciérrenlo. Para cancelar una fusión todavía en curso y volver al estado anterior:
-
-```sh
-git merge --abort
-```
-
-Empiecen siempre las fusiones con el trabajo guardado, para que cancelar no ponga en riesgo cambios previos. Referencia: [resolución de fusiones en Git](https://git-scm.com/docs/git-merge).
-
-**El `push` es rechazado con `non-fast-forward`.** Hay cambios remotos en esa misma rama. Con el trabajo local guardado:
-
-```sh
-git fetch origin
-git merge origin/MI_RAMA
-```
-
-Resuelvan los conflictos si aparecen, ejecuten las verificaciones y vuelvan a usar `git push`. Este caso integra la rama remota de trabajo; actualizar solo desde `origin/main` no lo resuelve.
-
-**`git pull --ff-only` falla en `main` porque las ramas divergieron.** Con el trabajo guardado, creen una rama para conservar los commits locales y revisarlos mediante un PR:
-
-```sh
-git switch -c rescate/mi-nombre-avance
-git fetch origin
-git merge origin/main
-```
-
-Resuelvan conflictos, verifiquen y publiquen esa rama con `git push -u origin rescate/mi-nombre-avance`. Coordinen la recuperación del `main` local antes de volver a usarlo; no borren sus commits con `reset --hard`.
-
-**Empecé a editar en `main` por error, pero aún no hice commit.** Creen una rama nueva inmediatamente; los cambios pendientes se mantienen:
-
-```sh
-git switch -c mi-nombre/rf-xx-descripcion
-git status
-```
-
-Después guarden y publiquen siguiendo el flujo normal. Si ya hicieron commits locales en `main`, usen el caso de rescate anterior.
-
-**Agregué un archivo al próximo commit por error.** Sáquenlo de la preparación sin borrar sus cambios:
-
-```sh
-git restore --staged -- RUTA_ARCHIVO
-```
-
-**Un commit ya compartido introdujo un error.** Desde una rama nueva basada en `main` actualizado, revisen el historial y reviertan el commit concreto:
-
-```sh
-git log --oneline -10
-git revert HASH_DEL_COMMIT
-```
-
-Sustituyan `HASH_DEL_COMMIT` por el identificador comprobado. Verifiquen el resultado y envíen la corrección por PR. Si la reversión tiene conflictos, resuélvanlos, agreguen los archivos y ejecuten `git revert --continue`; para cancelarla, `git revert --abort`. Si el commit es una fusión, acuerden con Omar qué revertir antes de ejecutarlo.
-
-**Hay conflictos en `package.json` o `package-lock.json`.** Coordinen con Omar la combinación de dependencias. No borren el archivo de bloqueo ni elijan una versión completa para salir del conflicto. Una vez resueltos ambos archivos, ejecuten la instalación y las verificaciones de Docker descritas abajo; si falla la instalación, corrijan la inconsistencia antes de completar la fusión.
-
-Referencia adicional: [guardado temporal con Git stash](https://git-scm.com/docs/git-stash).
-
 ## Ejecutar
 
-Requiere Docker Desktop abierto. Node, npm, Java, Expo, Firebase y todas las dependencias se ejecutan **dentro de Docker**. Los volúmenes `dependencies` y `functions-dependencies` aíslan ambos `node_modules` del equipo anfitrión. No instalar Node, Java, Expo CLI, Xcode ni Android Studio en el Mac.
+Requiere Docker Desktop abierto. Node, npm, Java, Expo, Firebase y todas las dependencias se ejecutan **dentro de Docker**. Los volúmenes `dependencies` y `functions-dependencies` aíslan ambos `node_modules` del equipo anfitrión. 
 
 ### 1. Preparar la terminal y las dependencias
 
@@ -268,28 +110,10 @@ docker compose logs -f workspace
 
 Espera el mensaje `All emulators ready`. Puedes salir de los logs con `Ctrl+C`; los contenedores siguen funcionando.
 
-En el navegador **del Mac**, abre [Firebase Emulator Suite](http://localhost:4000):
+En el navegador, abre [Firebase Emulator Suite](http://localhost:4000):
 
 - **[Authentication](http://localhost:4000/auth):** muestra las cuentas registradas, su correo y su UID (identificador único).
 - **[Firestore](http://localhost:4000/firestore/default/data) → `users`:** abre el documento cuyo identificador coincide con el UID. Allí verás `name` (nombre), `email` (correo), `role` (rol) y `state` (estado). La contraseña no se guarda en este documento.
-
-Registrarse crea la cuenta y su perfil; iniciar sesión utiliza esa misma cuenta, sin duplicarla. Si la lista está vacía, registra una cuenta desde la app. Para cargar las cuatro cuentas ficticias de prueba puedes ejecutar `docker compose exec workspace npm run seed`; ten presente que el seed vuelve a dejar sus perfiles de prueba en estado activo.
-
-Estos datos pertenecen al proyecto local `demo-unifood`, dentro de Docker. **No se consultan en `console.firebase.google.com`** y no necesitas crear un proyecto en la nube para esta demo.
-
-Si la app abre en el teléfono pero el registro falla, comprueba que `.env` tenga `UNIFOOD_HOST=TU_IP_WIFI` y ejecuta `docker compose up -d workspace app`. Ambos servicios deben usar la misma IP; después recarga Expo Go. El Mac y el teléfono deben estar en la misma red Wi-Fi. Para conservar los datos, detén normalmente los emuladores como se explica en «Detener o volver al modo local».
-
-### Problemas frecuentes al abrir Expo Go
-
-- **No conecta:** comprueba la misma Wi-Fi y la IP del Mac. Prueba `http://TU_IP_DEL_MAC:8081` en el navegador del teléfono. Redes de invitados/universidad pueden impedir comunicación entre dispositivos; usa una red privada que la permita. Revisa el permiso de red local de Expo Go en iOS y que el firewall permita los puertos de la demo.
-- **Abre la pantalla, pero falla el registro:** el teléfono también debe alcanzar Auth (9099) y Functions (5001), no solo Expo (8081). Verifica `UNIFOOD_HOST`, que los emuladores estén listos y reinicia/recarga la app tras cambiar la IP.
-- **El QR muestra una IP del contenedor:** recrea la app con `docker compose up -d --force-recreate app` desde la terminal donde exportaste `UNIFOOD_HOST`.
-- **SDK incompatible:** usa Expo Go compatible con SDK 57. Consulta [las versiones de Expo Go](https://expo.dev/go); la disponibilidad depende de la plataforma. No cambies el SDK del proyecto solo para quitar el mensaje.
-- **Error de cuenta en iPhone:** inicia sesión con la misma cuenta en Expo Go y en el CLI de Docker; después reinicia el contenedor `app`.
-- **Puerto ocupado:** detén la ejecución previa con `docker compose down`. No arranques dos servicios Expo sobre el mismo puerto.
-- **Tunnel:** no basta usar `--tunnel`: un túnel de Expo no publica automáticamente los emuladores Firebase. Este procedimiento utiliza LAN.
-
-Referencias: [abrir un proyecto en el teléfono](https://docs.expo.dev/get-started/start-developing/) y [opciones de Expo CLI y URL anunciada](https://docs.expo.dev/more/expo-cli/).
 
 ### Detener o volver al modo local
 
@@ -297,12 +121,6 @@ Referencias: [abrir un proyecto en el teléfono](https://docs.expo.dev/get-start
 docker compose down
 unset UNIFOOD_HOST
 ```
-
-Para abrir otra vez solo en el Mac, usa `export UNIFOOD_HOST=127.0.0.1` y sigue el paso 2. Puedes guardar `UNIFOOD_HOST=TU_IP_WIFI` en `.env` (excluido de Git) para que ambas partes mantengan la misma dirección entre terminales; actualízala si cambia la red. La variable exportada en la terminal tiene prioridad sobre `.env`.
-
-Auth/Firestore importan `.firebase/local-data` al arrancar y exportan allí al detenerse normalmente. Detén con `docker compose down` y espera a que termine; un cierre forzado puede perder cambios posteriores a la última exportación. Las dependencias y la sesión Expo permanecen en volúmenes Docker. La suite de integración levanta sus propios emuladores aislados, sin modificar la demo abierta.
-
-Identidades ficticias del seed: `demo-admin-1`, `demo-admin-2`, `demo-student` y `demo-restaurant`. Usan la contraseña de prueba `Demo1234`, exclusivamente en el proyecto emulado `demo-unifood`; no se envían correos. No hay configuración de un proyecto Firebase real.
 
 ## Estructura
 
@@ -314,54 +132,10 @@ Identidades ficticias del seed: `demo-admin-1`, `demo-admin-2`, `demo-student` y
 - `src/constants/`: colores y configuración visual.
 - `src/types/`: tipos compartidos del dominio.
 
-RF-25 y RF-26 son funciones que involucran varios roles; sus pantallas se ubican en el módulo del usuario correspondiente. Johan lidera RF-25 y Omar RF-26. Los cambios que requieran aportaciones de otro integrante se coordinan antes de editar los archivos compartidos.
-
-### Servicios privados
-
-Los perfiles se consultan con `POST /profile`, token de sesión y `{ "id": "UID_PROPIO" }`. Las lecturas directas a Firestore desde la app están bloqueadas, incluso para el propio perfil; todo pasa por el servicio, que comprueba sesión, revocación y rol. El panel local de Firebase sí muestra los datos. En la app se usa `callService('<acción>', input)`.
-
-| Servicio | Quién | Datos |
-| --- | --- | --- |
-| `POST /users/create` | Administrador activo | `name`, `email`, `password`, `confirmPassword`, `role` (`admin` o `student`; estudiante exige `@usc.edu.co`) |
-| `POST /users/list` | Administrador activo | — |
-| `POST /users/update` | Administrador activo | `id`, `version` (del listado), `name`, `email`; el rol no se edita |
-| `POST /recovery/request` | Sin sesión | `email` |
-| `POST /recovery/complete` | Sin sesión | `id`, `code`, `password`, `confirmPassword` |
-
-### Probar la gestión de usuarios
-
-1. Inicia los servicios Docker según la sección Ejecutar. Si aún no tienes cuentas ficticias, ejecuta `docker compose exec workspace npm run seed` (restablece los perfiles de las cuatro cuentas de demo).
-2. En Expo Go o web, inicia sesión con `admin1@usc.edu.co` o `admin2@example.test`, contraseña `Demo1234`.
-3. Pulsa **Crear usuario**, completa nombre, correo, tipo de cuenta y contraseña. El resultado aparece en la pantalla y el usuario se incorpora al listado.
-4. Pulsa **Editar** en una cuenta, modifica nombre/correo y guarda. El rol no se puede cambiar. Si cambias el correo, el siguiente acceso usa el nuevo.
-5. Si aparece un conflicto de versión, vuelve al listado y abre la edición actualizada. Ante desconexión se conserva lo escrito mientras la pantalla siga abierta; el reintento es manual.
-
-Siempre quedan al menos dos administradores activos.
-
-### Probar la recuperación de contraseña
-
-Sin Brevo configurado no se envían correos: el emulador escribe el enlace en su registro.
-
-1. En la pantalla de inicio de sesión pulsa **¿Olvidaste tu contraseña?**, escribe por ejemplo `student@usc.edu.co` y envía. El mensaje es el mismo exista o no la cuenta.
-2. Busca el enlace en el registro:
-
-   ```sh
-   docker compose logs workspace | grep "Enlace de recuperación"
-   ```
-
-3. Si no configuraste `RECOVERY_LINK_BASE`, el enlace empieza por `unifood://reset?id=…&code=…`. En el navegador abre `http://localhost:8081/reset?id=…&code=…`.
-4. Escribe la nueva contraseña dos veces. Al completar se cierran las sesiones abiertas y se accede con la nueva contraseña; la anterior deja de funcionar.
-
-El enlace vence a los 30 minutos, sirve una sola vez y pedir otro invalida el anterior. Una cuenta suspendida cambia la contraseña pero sigue bloqueada. Si el cambio no se completa, el mismo enlace puede reintentarse mientras siga vigente. El seed no restablece contraseñas: si cambias la de una cuenta de demo, recuérdala o vuelve a recuperarla con `Demo1234`.
-
 ### Enviar correos reales con Brevo
 
 El plan gratuito de Brevo permite 300 correos al día. Los correos llevan la marca de Brevo. El envío sale desde el emulador local, sin desplegar en Firebase.
 
-1. Crea una cuenta gratuita en [Brevo](https://www.brevo.com/).
-2. En **Senders, Domains & Dedicated IPs → Senders** agrega la dirección remitente del equipo y confírmala desde el correo que te llega.
-3. En **SMTP & API → API Keys** genera una clave. Cópiala solo en tu `.env`; no la pegues en el chat, en commits ni en el README.
-4. Agrega estas líneas al `.env` de la carpeta UniFood (excluido de Git):
 
    ```sh
    BREVO_API_KEY=tu-clave
@@ -369,17 +143,9 @@ El plan gratuito de Brevo permite 300 correos al día. Los correos llevan la mar
    RECOVERY_LINK_BASE=http://localhost:8081/reset
    ```
 
-   Para abrir el enlace desde el teléfono usa `RECOVERY_LINK_BASE=http://TU_IP_DEL_MAC:8081/reset`.
-5. Recrea los servicios para que lean el `.env`:
+Para abrir el enlace desde el teléfono usa `RECOVERY_LINK_BASE=http://TU_IP_DEL_MAC:8081/reset`.
+Recrea los servicios para que lean el `.env`:
 
-   ```sh
-   docker compose up -d workspace app
-   ```
-
-6. Usa una cuenta cuyo correo sea un buzón real que controles. Las cuentas del seed son ficticias y no reciben correo. Un estudiante necesita un correo `@usc.edu.co`; un administrador puede crear otra cuenta administradora con cualquier dominio.
-7. Pide la recuperación desde la app y abre el enlace del correo recibido.
-
-Si el correo no llega, revisa el registro: `docker compose logs workspace | grep "No se pudo enviar"`. Un `401` indica una clave incorrecta y un `400`, un remitente sin verificar. La app sigue mostrando el mensaje genérico. Las pruebas de integración ignoran la clave y nunca envían correos reales.
 
 ## Verificaciones
 
