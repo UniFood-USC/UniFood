@@ -2,18 +2,31 @@ import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import { callService } from '../../src/services/client';
 import { response } from '../../src/domain/response';
 import { registerStudent } from '../../src/services/registration';
-import { signInWithCustomToken } from 'firebase/auth';
+import { signInWithCustomToken, signOut } from 'firebase/auth';
 
 const mockGetIdToken = jest.fn<() => Promise<string>>();
 jest.mock('../../src/services/firebase', () => ({ localFirebase: () => ({
   auth: { currentUser: { getIdToken: mockGetIdToken } },
   baseUrl: 'http://127.0.0.1:5001/demo-unifood/us-central1/api', ready: Promise.resolve(),
 }) }));
-jest.mock('firebase/auth', () => ({ signInWithCustomToken: jest.fn() }));
+jest.mock('firebase/auth', () => ({ signInWithCustomToken: jest.fn(), signOut: jest.fn() }));
 const originalFetch = global.fetch;
 const mockFetch = jest.fn<typeof fetch>();
 beforeEach(() => { global.fetch = mockFetch as typeof fetch; mockFetch.mockReset(); mockGetIdToken.mockResolvedValue('verified-token'); });
 afterEach(() => { global.fetch = originalFetch; });
+
+test.each(['SESION_REQUERIDA', 'ACCESO_BLOQUEADO'] as const)('T022: %s limpia Auth para retirar vistas privadas', async code => {
+  mockFetch.mockResolvedValue({ ok: false, json: async () => response(code, 'Acceso rechazado.') } as Response);
+  expect((await callService('identity', {})).codigo).toBe(code);
+  expect(signOut).toHaveBeenCalledTimes(1);
+});
+
+test('T022: token ya invalidado por el SDK limpia la sesión sin enviar la operación', async () => {
+  mockGetIdToken.mockRejectedValue({ code: 'auth/user-token-expired' });
+  expect((await callService('identity', {})).codigo).toBe('SESION_REQUERIDA');
+  expect(signOut).toHaveBeenCalledTimes(1);
+  expect(mockFetch).not.toHaveBeenCalled();
+});
 
 test('el acceso común envía token de sesión y preserva errores autorizados HTTP', async () => {
   const denied = response('NO_AUTORIZADO', 'No tienes permiso.');

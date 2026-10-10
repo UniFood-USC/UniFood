@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { readFile } from 'node:fs/promises';
-import { initializeTestEnvironment, assertFails, assertSucceeds, RulesTestEnvironment } from '@firebase/rules-unit-testing';
+import { initializeTestEnvironment, assertFails, RulesTestEnvironment } from '@firebase/rules-unit-testing';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
@@ -32,10 +32,10 @@ test('emuladores: datos ficticios por rol y lectura/escritura aisladas', async (
   await db.doc('probe/local').delete();
 });
 
-test('reglas: perfil propio permitido; perfil ajeno, roles, pedidos y movimientos denegados', async () => {
+test('reglas: perfiles por servicio; lecturas y escrituras privadas directas denegadas', async () => {
   const student = rules.authenticatedContext('demo-student').firestore();
   const guest = rules.unauthenticatedContext().firestore();
-  await assertSucceeds(getDoc(doc(student, 'users/demo-student')));
+  await assertFails(getDoc(doc(student, 'users/demo-student')));
   await assertFails(getDoc(doc(student, 'users/demo-admin-1')));
   await assertFails(getDoc(doc(guest, 'users/demo-student')));
   await assertFails(setDoc(doc(student, 'users/demo-student'), { role: 'admin' }, { merge: true }));
