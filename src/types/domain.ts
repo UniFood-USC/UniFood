@@ -20,6 +20,11 @@ export interface Order {
   mode: FulfillmentMode;
   status: OrderStatus;
   paymentMethod: PaymentMethod;
+  total: number;                             // total del pedido (COP)
+  paid: boolean;                             // pago registrado
+  version: number;                           // sube con cada cambio
+  updatedBy?: { role: UserRole; id: string };
+  refund?: { amount: number; at: string };   // reembolso simulado, una sola vez
   scheduledFor?: string | null;      // ISO; pedido programado
   estimatedReadyAt?: string | null;  // ISO; para el aviso de demora
   statusHistory?: Partial<Record<OrderStatus, string>>; // ISO de cuándo se alcanzó cada estado
