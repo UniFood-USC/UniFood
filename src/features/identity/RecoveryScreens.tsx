@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
 import { Brand } from '../../components/Brand';
@@ -47,6 +47,7 @@ export function RecoveryRequestScreen({ request, onBack }: { request: Send; onBa
       ? <Button label="Volver a iniciar sesión" onPress={onBack} />
       : <Button label={pending ? 'Enviando…' : 'Enviar enlace'} pending={pending}
         onPress={() => { if (email.trim()) void submit({ email }); else setMessage('Escribe un correo válido.'); }} />}
+    {!sent && <BackLink onPress={onBack} disabled={pending} />}
   </Layout>;
 }
 
@@ -83,13 +84,19 @@ export function ResetPasswordScreen({ id, code, complete, onLogin, onRequestNew,
     {done ? <Button label="Iniciar sesión" onPress={onLogin} />
       : invalid ? <Button label="Solicitar enlace nuevo" onPress={onRequestNew} />
         : <Button label={pending ? 'Guardando…' : 'Guardar contraseña'} pending={pending} onPress={() => { void save(); }} />}
+    {!done && <BackLink onPress={onLogin} disabled={pending} />}
   </Layout>;
 }
 
 function Layout({ title, onBack, pending, children }: { title: string; onBack: () => void; pending: boolean; children: ReactNode }) {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   return <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
+      <View style={[styles.canvas, { minHeight: height }]}>
+      {/* Mismo fondo que el inicio de sesión. */}
+      <View pointerEvents="none" style={styles.background}>
+        <Image accessible={false} source={require('../../../assets/fondo-iniciar-sesion.png')} resizeMode="contain" style={styles.image} />
+      </View>
       <SafeAreaView style={styles.content}>
         <Pressable accessibilityRole="button" accessibilityLabel="Volver" onPress={onBack} disabled={pending} style={styles.back}>
           <Feather name="chevron-left" size={28} color={colors.ink} accessible={false} />
@@ -97,7 +104,9 @@ function Layout({ title, onBack, pending, children }: { title: string; onBack: (
         <View style={styles.brand}><Brand width={Math.min(width * 0.6, 240)} /></View>
         <Text accessibilityRole="header" style={styles.title}>{title}</Text>
         {children}
+        <View pointerEvents="none" style={{ height: Math.min(width, 480) * 0.4 }} />
       </SafeAreaView>
+      </View>
     </ScrollView>
   </KeyboardAvoidingView>;
 }
@@ -120,14 +129,23 @@ function Button({ label, onPress, pending = false }: { label: string; onPress: (
   </Pressable>;
 }
 
+function BackLink({ onPress, disabled }: { onPress: () => void; disabled: boolean }) {
+  return <Pressable accessibilityRole="button" accessibilityLabel="Volver al inicio" disabled={disabled}
+    accessibilityState={{ disabled }} onPress={onPress} style={styles.backLink}>
+    <Text style={styles.link}>Volver al inicio</Text>
+  </Pressable>;
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FAF7F2' }, scroll: { flexGrow: 1 },
-  content: { width: '100%', maxWidth: 480, alignSelf: 'center', paddingHorizontal: 26, paddingTop: 12, gap: 16 },
+  canvas: { width: '100%', maxWidth: 480, alignSelf: 'center', overflow: 'hidden' },
+  background: { position: 'absolute', bottom: 0, width: '100%', aspectRatio: 390 / 844 }, image: { width: '100%', height: '100%' },
+  content: { paddingHorizontal: 26, paddingTop: 12, gap: 16 },
   back: { width: 44, height: 44, justifyContent: 'center', marginLeft: -14 }, brand: { alignItems: 'center', marginBottom: 16 },
   title: { fontSize: 28, fontWeight: '700', color: colors.ink }, text: { color: colors.muted, fontSize: 15, lineHeight: 22 },
   field: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, gap: 14, minHeight: 54, borderWidth: 1, borderColor: '#CDD0D5', backgroundColor: '#FFFFFFB3', borderRadius: 13 },
   input: { flex: 1, minWidth: 0, minHeight: 52, paddingVertical: 12, fontSize: 16, color: colors.ink },
-  linkButton: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' }, link: { color: colors.primary, fontSize: 15, fontWeight: '600' },
+  linkButton: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' }, backLink: { minHeight: 44, justifyContent: 'center', alignSelf: 'center' }, link: { color: colors.primary, fontSize: 15, fontWeight: '600' },
   button: { minHeight: 56, padding: 14, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F56A25', borderRadius: 24, marginTop: 8 },
   buttonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 20 }, dimmed: { opacity: 0.65 },
 });

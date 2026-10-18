@@ -75,3 +75,14 @@ test('enlace vencido o incompleto ofrece solicitar uno nuevo sin formulario', as
   await render(<ResetPasswordScreen complete={complete} onLogin={jest.fn()} onRequestNew={jest.fn()} />);
   expect(screen.getByText('El enlace no es válido. Solicita uno nuevo.')).toBeTruthy();
 });
+
+test('«Volver al inicio» regresa al inicio de sesión desde ambas pantallas', async () => {
+  const onBack = jest.fn();
+  await render(<RecoveryRequestScreen request={jest.fn()} onBack={onBack} />);
+  await fireEvent.press(screen.getByRole('button', { name: 'Volver al inicio' }));
+  expect(onBack).toHaveBeenCalledTimes(1);
+  const onLogin = jest.fn();
+  await render(<ResetPasswordScreen id="demo-student" code="secreto" complete={jest.fn()} onLogin={onLogin} onRequestNew={jest.fn()} />);
+  await fireEvent.press(screen.getByRole('button', { name: 'Volver al inicio' }));
+  expect(onLogin).toHaveBeenCalledTimes(1);
+});
