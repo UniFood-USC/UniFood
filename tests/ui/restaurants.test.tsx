@@ -16,22 +16,23 @@ const lista: RestaurantePublico[] = [
   { id: 'rest-wok', nombre: 'Wok Express', disponible: false },
 ];
 
-test('muestra al menos 5 restaurantes con nombre, estado de disponibilidad y próxima apertura', async () => {
+test('muestra al menos 5 restaurantes con nombre, Abierto/Cerrado y próxima apertura', async () => {
   const service = jest.fn().mockResolvedValue(response('OK', 'Restaurantes consultados.', { restaurants: lista }));
   await render(<RestaurantsScreen service={service} />);
-  expect(await screen.findByLabelText('Burger Campus. Disponible')).toBeTruthy();
+  expect(await screen.findByLabelText('Burger Campus. Abierto')).toBeTruthy();
   for (const r of lista) expect(screen.getByText(r.nombre)).toBeTruthy();
-  expect(screen.getByLabelText('Sazón USC. No disponible. Abre Mañana 06:30')).toBeTruthy();
+  expect(screen.getByLabelText('Sazón USC. Cerrado. Abre Mañana 06:30')).toBeTruthy();
   expect(screen.getByText('Abre: Hoy 14:00')).toBeTruthy();
-  expect(screen.getByLabelText('Wok Express. No disponible')).toBeTruthy();
-  expect(screen.getByText('6 restaurantes en el campus · 3 disponibles ahora')).toBeTruthy();
+  expect(screen.getByLabelText('Wok Express. Cerrado')).toBeTruthy();
+  expect(screen.getAllByText('Cerrado')).toHaveLength(3);
+  expect(screen.getByText('6 restaurantes en el campus · 3 abiertos ahora')).toBeTruthy();
   expect(service).toHaveBeenCalledWith('restaurants/list', {});
 });
 
 test('sin resultados informa al estudiante', async () => {
-  const service = jest.fn().mockResolvedValue(response('OK', 'No hay restaurantes disponibles por ahora.', { restaurants: [] }));
+  const service = jest.fn().mockResolvedValue(response('OK', 'No hay restaurantes para mostrar.', { restaurants: [] }));
   await render(<RestaurantsScreen service={service} />);
-  expect(await screen.findByText('No hay restaurantes disponibles por ahora.')).toBeTruthy();
+  expect(await screen.findByText('No hay restaurantes para mostrar.')).toBeTruthy();
 });
 
 test('un error de conexión se informa y se reintenta solo al pulsar', async () => {

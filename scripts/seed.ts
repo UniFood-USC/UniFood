@@ -32,8 +32,9 @@ export async function seedDemo() {
 }
 
 // RF-04 · Restaurantes ficticios del campus (colección `restaurantes`).
-// Aprobados: 6, para que el listado muestre más de 5. También hay uno pendiente y uno
-// suspendido que NO deben aparecer, y campos privados que NO deben salir del servicio.
+// Aprobados y activos: 6 (el listado muestra más de 5, con abiertos y cerrados según la hora).
+// NO deben aparecer: uno inactivo, uno pendiente, uno suspendido y uno eliminado.
+// ownerId y ownerEmail simulan campos privados que el servicio nunca debe exponer.
 const tramo = (abre: string, cierra: string) => ({ abre, cierra });
 const semana = (dias: string[], abre: string, cierra: string) => Object.fromEntries(dias.map(dia => [dia, tramo(abre, cierra)]));
 const LUN_SAB = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
@@ -49,11 +50,12 @@ export async function seedRestaurants() {
     { id: 'rest-cafe', nombre: 'Café Universitario', estado: 'aprobado', activo: true, horario: semana(LUN_SAB, '06:00', '19:00') },
     // Sin horario definido: disponible mientras esté activo (siempre hay uno abierto en la demo).
     { id: 'rest-fruta', nombre: 'Fruta Fresca', estado: 'aprobado', activo: true },
-    // Aprobado pero desactivado por su dueño: se lista como no disponible.
-    { id: 'rest-wok', nombre: 'Wok Express', logo: logo('WE'), estado: 'aprobado', activo: false, horario: semana(LUN_SAB, '10:00', '18:00') },
+    { id: 'rest-arepas', nombre: 'Arepas del Valle', logo: logo('AV'), estado: 'aprobado', activo: true, horario: semana(LUN_VIE, '07:00', '16:00') },
     // No se listan para el estudiante.
-    { id: 'rest-nuevo', nombre: 'Sabores Nuevos', estado: 'pendiente', activo: false },
-    { id: 'rest-baja', nombre: 'Taquería Suspendida', estado: 'suspendido', activo: false },
+    { id: 'rest-wok', nombre: 'Wok Express', logo: logo('WE'), estado: 'aprobado', activo: false, horario: semana(LUN_SAB, '10:00', '18:00') },
+    { id: 'rest-nuevo', nombre: 'Sabores Nuevos', estado: 'pendiente', activo: true },
+    { id: 'rest-baja', nombre: 'Taquería Suspendida', estado: 'suspendido', activo: true },
+    { id: 'rest-eliminado', nombre: 'Fonda Cerrada', estado: 'eliminado', activo: false },
   ];
   for (const { id, ...datos } of restaurantes) {
     // ownerEmail y ownerId simulan los campos privados que el listado nunca debe exponer.
@@ -61,4 +63,4 @@ export async function seedRestaurants() {
   }
 }
 
-if (process.argv[1]?.endsWith('/seed.ts')) seedDemo().then(() => console.log('Cuatro identidades y ocho restaurantes ficticios preparados en demo-unifood.')).catch(error => { console.error(error.message); process.exitCode = 1; });
+if (process.argv[1]?.endsWith('/seed.ts')) seedDemo().then(() => console.log('Cuatro identidades y diez restaurantes ficticios preparados en demo-unifood.')).catch(error => { console.error(error.message); process.exitCode = 1; });

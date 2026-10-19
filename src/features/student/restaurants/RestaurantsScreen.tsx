@@ -50,10 +50,10 @@ export default function RestaurantsScreen({ service }: { service: Service }) {
       <Text style={styles.subtitle}>Encuentra dónde comer en el campus.</Text>
       {loading ? <Feedback state="loading" message="Consultando restaurantes…" />
         : error ? <Feedback state="error" message={error} onRetry={retry} />
-        : !restaurants.length ? <Feedback state="empty" message="No hay restaurantes disponibles por ahora." />
+        : !restaurants.length ? <Feedback state="empty" message="No hay restaurantes para mostrar." />
         : <>
           <Text accessibilityLiveRegion="polite" style={styles.count}>
-            {restaurants.length === 1 ? '1 restaurante' : `${restaurants.length} restaurantes`} en el campus · {open} {open === 1 ? 'disponible' : 'disponibles'} ahora
+            {restaurants.length === 1 ? '1 restaurante' : `${restaurants.length} restaurantes`} en el campus · {open} {open === 1 ? 'abierto' : 'abiertos'} ahora
           </Text>
           {restaurants.map(restaurant => <RestaurantCard key={restaurant.id} restaurant={restaurant} />)}
         </>}

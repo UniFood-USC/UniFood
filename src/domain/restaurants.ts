@@ -52,16 +52,16 @@ export function proximaApertura(horario: Horario, ahora: Date): string | undefin
 
 /**
  * Convierte un documento de Firestore en lo único que ve el estudiante.
- * - Solo restaurantes aprobados (pendiente, suspendido y eliminado no se listan).
- * - disponible = activo y dentro de su horario. Sin horario definido, depende solo de `activo`.
+ * - Solo restaurantes aprobados Y activos (pendiente, suspendido, eliminado e inactivos no se listan).
+ * - Los cerrados por horario SÍ se listan: disponible = false y, si se conoce, su próxima apertura.
+ * - disponible = dentro de su horario. Sin horario definido, se considera que atiende.
  * - Nunca copia campos privados (dueño, correo, etc.): se arma el objeto campo por campo.
  */
 export function aRestaurantePublico({ id, data }: RestauranteGuardado, ahora: Date): RestaurantePublico | null {
-  if (data.estado !== 'aprobado' || typeof data.nombre !== 'string' || !data.nombre.trim()) return null;
+  if (data.estado !== 'aprobado' || data.activo !== true || typeof data.nombre !== 'string' || !data.nombre.trim()) return null;
   const horario = data.horario;
-  const activo = data.activo === true;
-  const disponible = activo && (horario ? atiendeAhora(horario, ahora) : true);
-  const proxima = !disponible && activo && horario ? proximaApertura(horario, ahora) : undefined;
+  const disponible = horario ? atiendeAhora(horario, ahora) : true;
+  const proxima = !disponible && horario ? proximaApertura(horario, ahora) : undefined;
   return {
     id,
     nombre: data.nombre.trim(),
@@ -71,7 +71,14 @@ export function aRestaurantePublico({ id, data }: RestauranteGuardado, ahora: Da
   };
 }
 
-// Los que atienden ahora primero; dentro de cada grupo, orden alfabético.
+// Regla para el flujo de pedidos: un restaurante cerrado no recibe pedidos inmediatos.
+// Quien cree pedidos (carrito/confirmación) debe usar esta misma función en el servidor
+// y responder con el código RESTAURANTE_CERRADO cuando devuelva false.
+export function puedeRecibirPedidoInmediato(data: Partial<RestauranteDoc>, ahora: Date): boolean {
+  return aRestaurantePublico({ id: '', data }, ahora)?.disponible === true;
+}
+
+// Los abiertos ahora primero; dentro de cada grupo, orden alfabético.
 export function listarRestaurantesPublicos(docs: readonly RestauranteGuardado[], ahora: Date): RestaurantePublico[] {
   return docs
     .map(doc => aRestaurantePublico(doc, ahora))

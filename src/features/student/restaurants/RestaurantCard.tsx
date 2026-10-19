@@ -6,7 +6,7 @@ import type { RestaurantePublico } from '../../../types/Estado_Restaurante';
 export function RestaurantCard({ restaurant }: { restaurant: RestaurantePublico }) {
   const [logoFailed, setLogoFailed] = useState(false);
   const { nombre, logo, disponible, proximaApertura } = restaurant;
-  const label = `${nombre}. ${disponible ? 'Disponible' : 'No disponible'}${proximaApertura ? `. Abre ${proximaApertura}` : ''}`;
+  const label = `${nombre}. ${disponible ? 'Abierto' : 'Cerrado'}${proximaApertura ? `. Abre ${proximaApertura}` : ''}`;
   return (
     <View accessible accessibilityLabel={label} style={styles.card}>
       {logo && !logoFailed
@@ -18,7 +18,7 @@ export function RestaurantCard({ restaurant }: { restaurant: RestaurantePublico 
         <Text numberOfLines={2} style={styles.name}>{nombre}</Text>
         <View style={[styles.chip, !disponible && styles.chipClosed]}>
           <View style={[styles.dot, disponible ? styles.dotOpen : styles.dotClosed]} />
-          <Text style={styles.chipText}>{disponible ? 'Disponible' : 'No disponible'}</Text>
+          <Text style={styles.chipText}>{disponible ? 'Abierto' : 'Cerrado'}</Text>
         </View>
         {!!proximaApertura && <Text style={styles.opens}>Abre: {proximaApertura}</Text>}
       </View>
