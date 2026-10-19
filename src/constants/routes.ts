@@ -9,6 +9,7 @@ export const routes = {
   orders: '/orders',
 
   // Estudiante
+  restaurantList: '/restaurants', // RF-04 (no confundir con restaurant: módulo del rol Restaurante)
   orderTracking: (orderId: string) =>
     ({ pathname: '/order/[id]', params: { id: orderId } }) as const,
 } as const;
