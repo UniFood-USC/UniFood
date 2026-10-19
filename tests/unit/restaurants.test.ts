@@ -1,6 +1,6 @@
 import { test, expect } from '@jest/globals';
 import { ahoraEnColombia, aRestaurantePublico, atiendeAhora, listarRestaurantesPublicos, proximaApertura } from '../../src/domain/restaurants';
-import type { Horario } from '../../src/types/Estado_Restaurante';
+import type { EstadoRestaurante, Horario } from '../../src/types/Estado_Restaurante';
 
 // 2026-10-19 es lunes. Colombia es UTC-5: 15:00Z = 10:00 en Bogotá.
 const lunes10 = new Date('2026-10-19T15:00:00Z');
@@ -59,7 +59,7 @@ test('el logo solo se acepta como https', () => {
 });
 
 test('el listado ordena disponibles primero y luego por nombre, con más de 5 restaurantes', () => {
-  const doc = (id: string, nombre: string, activo = true, estado = 'aprobado') => ({ id, data: { nombre, estado, activo } as const });
+    const doc = (id: string, nombre: string, activo = true, estado: EstadoRestaurante = 'aprobado') => ({ id, data: { nombre, estado, activo } });
   const lista = listarRestaurantesPublicos([
     doc('1', 'Zeta'), doc('2', 'Árbol', false), doc('3', 'Beta'), doc('4', 'Alfa'), doc('5', 'Omega', false), doc('6', 'Delta'),
     doc('7', 'Pendiente', true, 'pendiente'),
