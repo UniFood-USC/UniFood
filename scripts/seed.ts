@@ -28,6 +28,37 @@ export async function seedDemo() {
       if (control) tx.set(control.ref, { activeCount: control.activeCount + (old?.role === 'admin' && old.state === 'active' ? 0 : 1), version: control.version + 1 });
     });
   }
+  await seedRestaurants();
 }
 
-if (process.argv[1]?.endsWith('/seed.ts')) seedDemo().then(() => console.log('Cuatro identidades ficticias preparadas en demo-unifood.')).catch(error => { console.error(error.message); process.exitCode = 1; });
+// RF-04 · Restaurantes ficticios del campus (colección `restaurantes`).
+// Aprobados: 6, para que el listado muestre más de 5. También hay uno pendiente y uno
+// suspendido que NO deben aparecer, y campos privados que NO deben salir del servicio.
+const tramo = (abre: string, cierra: string) => ({ abre, cierra });
+const semana = (dias: string[], abre: string, cierra: string) => Object.fromEntries(dias.map(dia => [dia, tramo(abre, cierra)]));
+const LUN_SAB = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+const LUN_VIE = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'];
+const logo = (texto: string) => `https://placehold.co/160x160/C8440A/FFFFFF/png?text=${texto}`;
+
+export async function seedRestaurants() {
+  const db = getFirestore();
+  const restaurantes = [
+    { id: 'rest-burger', nombre: 'Burger Campus', logo: logo('BC'), estado: 'aprobado', activo: true, horario: semana(LUN_SAB, '07:00', '20:00') },
+    { id: 'rest-pizza', nombre: 'Pizza Zona', logo: logo('PZ'), estado: 'aprobado', activo: true, horario: semana(LUN_SAB, '11:00', '21:00') },
+    { id: 'rest-sazon', nombre: 'Sazón USC', logo: logo('SU'), estado: 'aprobado', activo: true, horario: semana(LUN_VIE, '06:30', '15:00') },
+    { id: 'rest-cafe', nombre: 'Café Universitario', estado: 'aprobado', activo: true, horario: semana(LUN_SAB, '06:00', '19:00') },
+    // Sin horario definido: disponible mientras esté activo (siempre hay uno abierto en la demo).
+    { id: 'rest-fruta', nombre: 'Fruta Fresca', estado: 'aprobado', activo: true },
+    // Aprobado pero desactivado por su dueño: se lista como no disponible.
+    { id: 'rest-wok', nombre: 'Wok Express', logo: logo('WE'), estado: 'aprobado', activo: false, horario: semana(LUN_SAB, '10:00', '18:00') },
+    // No se listan para el estudiante.
+    { id: 'rest-nuevo', nombre: 'Sabores Nuevos', estado: 'pendiente', activo: false },
+    { id: 'rest-baja', nombre: 'Taquería Suspendida', estado: 'suspendido', activo: false },
+  ];
+  for (const { id, ...datos } of restaurantes) {
+    // ownerEmail y ownerId simulan los campos privados que el listado nunca debe exponer.
+    await db.doc(`restaurantes/${id}`).set({ ...datos, ownerId: 'demo-restaurant', ownerEmail: 'restaurant@example.test' });
+  }
+}
+
+if (process.argv[1]?.endsWith('/seed.ts')) seedDemo().then(() => console.log('Cuatro identidades y ocho restaurantes ficticios preparados en demo-unifood.')).catch(error => { console.error(error.message); process.exitCode = 1; });

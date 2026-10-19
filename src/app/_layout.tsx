@@ -23,6 +23,7 @@ function Navigator() {
     <Stack.Protected guard={identity?.role === 'student'}>
       <Stack.Screen name="student" options={{ title: 'Estudiante', headerRight }} />
       <Stack.Screen name="order/[id]" />
+      <Stack.Screen name="restaurants" />
     </Stack.Protected>
     <Stack.Protected guard={identity?.role === 'restaurant'}>
       <Stack.Screen name="restaurant" options={{ title: 'Restaurante', headerRight }} />
