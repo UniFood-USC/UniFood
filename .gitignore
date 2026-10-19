@@ -31,6 +31,7 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
 
 # typescript
@@ -46,3 +47,10 @@ yarn-error.*
 # Local working material
 /AGENTS.md
 /docs/
+
+# Local emulator output and compiled service
+functions/lib/
+*-debug.log
+.firebase/
+coverage/
+compose.yaml

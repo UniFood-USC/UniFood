@@ -1,0 +1,9 @@
+node_modules
+functions/node_modules
+functions/lib
+.git
+.expo
+dist
+docs
+*.log
+.env*
