@@ -54,6 +54,16 @@ function seed(): Order[] {
       cancelledBy: 'restaurant', cancelReason: 'Producto agotado',
       refund: { amount: 32000, at: ago(2890) },
       statusHistory: { received: ago(2900), cancelled: ago(2890) }, createdAt: ago(2900), updatedAt: ago(2890) },
+    { ...base, id: 'UC1015', restaurantId: 'rest-burger', mode: 'pickup', status: 'collected',
+      statusHistory: { received: ago(240), preparing: ago(230), ready: ago(220), collected: ago(210) },
+      createdAt: ago(240), updatedAt: ago(210) },
+    { ...base, id: 'UC1016', restaurantId: 'rest-burger', mode: 'delivery', status: 'cancelled',
+      refund: { amount: 32000, at: ago(180) },
+      statusHistory: { received: ago(200), cancelled: ago(180) }, createdAt: ago(200), updatedAt: ago(180) },
+    { ...base, id: 'UC1014', restaurantId: 'rest-burger', mode: 'delivery', status: 'delivered',
+      total: 0, paid: false,
+      statusHistory: { received: ago(120), preparing: ago(110), ready: ago(100), on_the_way: ago(90), delivered: ago(80) },
+      createdAt: ago(120), updatedAt: ago(80) },
   ];
 }
 

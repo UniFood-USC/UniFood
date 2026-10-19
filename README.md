@@ -127,6 +127,8 @@ unset UNIFOOD_HOST
 - `src/app/`: pantallas y navegación con Expo Router.
 - `src/features/student/`: módulo Estudiante (RF-01 a RF-15), selección de bloque y salón para domicilio (RF-25), y selección de fecha y hora para pedidos programados (RF-26).
 - `src/features/restaurant/`: módulo Restaurante (RF-16 a RF-20), configuración de cobertura y tarifa y gestión de entregas al salón (RF-25), y configuración de horarios y cupos y gestión de pedidos programados (RF-26).
+- El historial RF-19 se prueba con pedidos de demostración en memoria; la identidad de restaurante aún no está vinculada a un restaurante persistido.
+- `src/domain/sales.ts`: reglas para ventas completadas, cancelaciones y reembolsos, aisladas por identificador de restaurante.
 - `src/features/admin/`: módulo Administrador (RF-21 a RF-24) y administración del catálogo de bloques y salones (RF-25).
 - `src/components/`: componentes compartidos.
 - `src/constants/`: colores y configuración visual.
