@@ -57,3 +57,57 @@ test('desde el inicio del estudiante se llega al listado', async () => {
   await fireEvent.press(screen.getByRole('button', { name: 'Ver restaurantes' }));
   expect(mockPush).toHaveBeenCalledWith('/restaurants');
 });
+
+// RF-05 · Búsqueda de restaurantes por nombre.
+const abrirListado = async () => {
+  const service = jest.fn().mockResolvedValue(response('OK', 'Restaurantes consultados.', { restaurants: lista }));
+  await render(<RestaurantsScreen service={service} />);
+  await screen.findByText('Burger Campus');
+  return screen.getByLabelText('Buscar restaurantes');
+};
+
+test('RF-05: al escribir el nombre de un restaurante existente aparece entre los resultados', async () => {
+  const campo = await abrirListado();
+  await fireEvent.changeText(campo, 'Burger Campus');
+  expect(screen.getByText('Burger Campus')).toBeTruthy();
+  expect(screen.queryByText('Pizza Zona')).toBeNull();
+  expect(screen.getByText('1 resultado para "Burger Campus"')).toBeTruthy();
+});
+
+test('RF-05: admite coincidencias parciales sin distinguir mayúsculas ni tildes', async () => {
+  const campo = await abrirListado();
+  await fireEvent.changeText(campo, 'PIZZ');
+  expect(screen.getByText('Pizza Zona')).toBeTruthy();
+  expect(screen.queryByText('Burger Campus')).toBeNull();
+  await fireEvent.changeText(campo, 'sazon');
+  expect(screen.getByText('Sazón USC')).toBeTruthy();
+  await fireEvent.changeText(campo, 'CAFÉ');
+  expect(screen.getByText('Café Universitario')).toBeTruthy();
+  expect(screen.queryByText('Sazón USC')).toBeNull();
+});
+
+test('RF-05: los restaurantes cerrados también se buscan y muestran su próxima apertura', async () => {
+  const campo = await abrirListado();
+  await fireEvent.changeText(campo, 'cafe');
+  expect(screen.getByLabelText('Café Universitario. Cerrado. Abre Hoy 14:00')).toBeTruthy();
+  expect(screen.getByText('Abre: Hoy 14:00')).toBeTruthy();
+});
+
+test('RF-05: sin coincidencias muestra un mensaje de búsqueda sin resultados', async () => {
+  const campo = await abrirListado();
+  await fireEvent.changeText(campo, 'sushi');
+  expect(screen.getByText('No encontramos restaurantes con "sushi".')).toBeTruthy();
+  for (const r of lista) expect(screen.queryByText(r.nombre)).toBeNull();
+});
+
+test('RF-05: con el campo vacío se muestran todos los restaurantes, cerrados incluidos', async () => {
+  const campo = await abrirListado();
+  await fireEvent.changeText(campo, 'sushi');
+  await fireEvent.changeText(campo, '');
+  for (const r of lista) expect(screen.getByText(r.nombre)).toBeTruthy();
+  expect(screen.getByText('6 restaurantes en el campus · 3 abiertos ahora')).toBeTruthy();
+  // El botón de borrar también devuelve el listado completo.
+  await fireEvent.changeText(campo, 'pizz');
+  await fireEvent.press(screen.getByRole('button', { name: 'Borrar búsqueda' }));
+  for (const r of lista) expect(screen.getByText(r.nombre)).toBeTruthy();
+});
