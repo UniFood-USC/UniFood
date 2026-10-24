@@ -39,7 +39,7 @@ export default function StudentScreen() {
   return <SafeAreaView edges={['top']} style={styles.screen}>
     <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.top}>
-        <Brand width={120} />
+        <Brand width={160} horizontal />
         <Pressable accessibilityRole="button" accessibilityLabel="Perfil" onPress={() => router.push('/student/profile')} style={styles.avatar}>
           <Feather name="user" size={22} color={colors.ink} accessible={false} />
         </Pressable>
