@@ -1,6 +1,6 @@
 module.exports = {
   preset: 'jest-expo',
-  testMatch: ['<rootDir>/tests/unit/**/*.test.ts', '<rootDir>/tests/ui/**/*.test.tsx', '<rootDir>/tests/student/**/*.test.ts?(x)'],
+  testMatch: ['<rootDir>/tests/unit/**/*.test.ts', '<rootDir>/tests/ui/**/*.test.tsx', '<rootDir>/tests/student/**/*.test.ts?(x)', '<rootDir>/tests/orders/**/*.test.ts'],
   setupFiles: ['<rootDir>/tests/jestSetup.js'],
   clearMocks: true,
   // El primer render carga el runtime nativo simulado dentro de Docker.
