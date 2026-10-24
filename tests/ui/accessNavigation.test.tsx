@@ -100,6 +100,6 @@ test.each(['/student/cart', '/restaurant/menu', '/admin/promotions', '/orders'])
 
 test('pestaña sin función muestra «Próximamente»', async () => {
   await signIn('student');
-  await act(() => router.push('/student/cart'));
+  await act(() => router.push('/student/search'));
   expect(await screen.findByText('Próximamente')).toBeTruthy();
 });
