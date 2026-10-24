@@ -9,7 +9,7 @@ import { validateContact, validateRegistration } from '../../domain/registration
 import { roleLabels, stateLabels, type ManagedUser } from '../../domain/users';
 import type { ServiceResponse } from '../../domain/response';
 
-type Service = (action: 'users/list' | 'users/create' | 'users/update', input: unknown) => Promise<ServiceResponse>;
+type Service = (action: 'users/list' | 'users/create' | 'users/update' | 'users/state', input: unknown) => Promise<ServiceResponse>;
 export default function UsersScreen({ service }: { service: Service }) {
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,6 +20,7 @@ export default function UsersScreen({ service }: { service: Service }) {
   const [password, setPassword] = useState(''), [confirmPassword, setConfirmPassword] = useState('');
   const [visible, setVisible] = useState(false);
   const [busy, setBusy] = useState(false), [message, setMessage] = useState('');
+  const [confirming, setConfirming] = useState<string | null>(null);
   const sending = useRef(false);
   const mounted = useRef(true);
   const load = useCallback(() => service('users/list', {}).then(result => {
@@ -38,6 +39,18 @@ export default function UsersScreen({ service }: { service: Service }) {
   function open(user: ManagedUser | 'new') {
     setForm(user); setMessage(''); setPassword(''); setConfirmPassword(''); setVisible(false);
     setName(user === 'new' ? '' : user.pendingContact?.name ?? user.name); setEmail(user === 'new' ? '' : user.pendingContact?.email ?? user.email); setRole('student');
+  }
+  // Suspender bloquea el acceso de inmediato; se confirma antes de enviar.
+  async function changeState(user: ManagedUser) {
+    if (sending.current) return;
+    sending.current = true; setBusy(true); setMessage('');
+    try {
+      const result = await service('users/state', { id: user.id, state: user.state === 'active' ? 'suspended' : 'active' });
+      if (!mounted.current) return;
+      setMessage(result.mensaje);
+      if (result.codigo === 'OK') await load();
+    } catch { if (mounted.current) setMessage('Sin conexión: no se confirmó el cambio. Revisa el listado y reintenta.'); }
+    finally { sending.current = false; setConfirming(null); if (mounted.current) setBusy(false); }
   }
   async function save() {
     if (!form || sending.current) return;
@@ -93,6 +106,13 @@ export default function UsersScreen({ service }: { service: Service }) {
               <Text style={styles.subtitle}>{roleLabels[user.role]} · {stateLabels[user.state]}</Text>
               {!!user.pendingContact && <Text style={styles.body}>Edición pendiente de verificación</Text>}
               {user.state !== 'deleted' && <Pressable accessibilityRole="button" accessibilityLabel={`Editar ${user.name}`} onPress={() => open(user)} style={styles.edit}><Feather name="edit-2" size={18} color={colors.primary} /><Text style={styles.secondaryLabel}>Editar</Text></Pressable>}
+              {user.role !== 'restaurant' && user.state !== 'deleted' && (confirming === user.id ? <View style={styles.confirm}>
+                <Text style={styles.body}>{user.state === 'active' ? `¿Suspender a ${user.name}? Perderá el acceso de inmediato, incluso con la sesión abierta.` : `¿Reactivar a ${user.name}? Podrá volver a iniciar sesión.`}</Text>
+                <ActionButton busy={busy} label={user.state === 'active' ? 'Confirmar suspensión' : 'Confirmar reactivación'} onPress={() => { void changeState(user); }} />
+                <ActionButton busy={busy} label="Cancelar" secondary onPress={() => setConfirming(null)} />
+              </View> : <Pressable accessibilityRole="button" accessibilityLabel={`${user.state === 'active' ? 'Suspender' : 'Reactivar'} ${user.name}`} disabled={busy} onPress={() => setConfirming(user.id)} style={styles.edit}>
+                <Feather name={user.state === 'active' ? 'slash' : 'check-circle'} size={18} color={colors.primary} /><Text style={styles.secondaryLabel}>{user.state === 'active' ? 'Suspender' : 'Reactivar'}</Text>
+              </Pressable>)}
             </View>)}
           </>}
         </>}
@@ -126,4 +146,5 @@ const styles = StyleSheet.create({
   role: { minHeight: 48, padding: 12, justifyContent: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: 14 },
   selected: { backgroundColor: colors.accent, borderColor: colors.primary },
   edit: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48 },
+  confirm: { gap: 10, padding: 14, borderRadius: 16, backgroundColor: colors.accent },
 });
