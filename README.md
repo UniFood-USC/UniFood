@@ -63,7 +63,7 @@ Abre [UniFood](http://localhost:8081), [registro estudiantil](http://localhost:8
 
 ### 3. Ver la app en Expo Go desde el teléfono
 
-Sí: la base actual usa bibliotecas compatibles con Expo Go. Necesitas **Expo Go compatible con SDK 57 en el teléfono**, y el Mac y el teléfono en la **misma red Wi-Fi**. Los servidores y dependencias permanecen en Docker; Expo Go es la app que muestra el resultado en el teléfono. No se ha certificado aún una prueba física Android/iOS de esta entrega.
+Sí: la base actual usa bibliotecas compatibles con Expo Go. Necesitas **Expo Go compatible con SDK 58 en el teléfono**, y el Mac y el teléfono en la **misma red Wi-Fi**. Los servidores y dependencias permanecen en Docker; Expo Go es la app que muestra el resultado en el teléfono. No se ha certificado aún una prueba física Android/iOS de esta entrega.
 
 Busca la **dirección IP del Mac** en Ajustes del Sistema → Wi-Fi → Detalles → TCP/IP. Usa esa dirección, no la del router ni una dirección interna del contenedor. Sustituye la IP del ejemplo:
 
@@ -170,5 +170,5 @@ docker compose run --rm workspace npx expo install --check
 
 ## Referencias
 
-- [Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/)
+- [Expo SDK 58](https://docs.expo.dev/versions/v58.0.0/)
 - [Expo Router](https://docs.expo.dev/router/installation/)
