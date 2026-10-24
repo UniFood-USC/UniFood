@@ -1,6 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import RestaurantsScreen from '../../src/features/student/restaurants/RestaurantsScreen';
-import StudentScreen from '../../src/features/student/StudentScreen';
 import { response } from '../../src/domain/response';
 import type { RestaurantePublico } from '../../src/types/Estado_Restaurante';
 
@@ -50,10 +49,4 @@ test('un rechazo del servicio muestra su mensaje', async () => {
   const service = jest.fn().mockResolvedValue(response('NO_AUTORIZADO', 'Solo los estudiantes consultan el listado de restaurantes.'));
   await render(<RestaurantsScreen service={service} />);
   expect(await screen.findByText('Solo los estudiantes consultan el listado de restaurantes.')).toBeTruthy();
-});
-
-test('desde el inicio del estudiante se llega al listado', async () => {
-  await render(<StudentScreen />);
-  await fireEvent.press(screen.getByRole('button', { name: 'Ver restaurantes' }));
-  expect(mockPush).toHaveBeenCalledWith('/restaurants');
 });

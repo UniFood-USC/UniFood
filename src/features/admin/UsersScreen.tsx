@@ -59,7 +59,7 @@ export default function UsersScreen({ service }: { service: Service }) {
     } catch { if (mounted.current) setMessage('Sin conexión: los cambios no se han guardado o confirmado. Conservamos lo escrito; reintenta manualmente.'); }
     finally { sending.current = false; if (mounted.current) setBusy(false); }
   }
-  return <SafeAreaView edges={['bottom', 'left', 'right']} style={styles.screen}>
+  return <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
     <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
         <Brand width={154} />
