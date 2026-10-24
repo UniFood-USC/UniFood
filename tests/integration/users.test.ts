@@ -3,7 +3,7 @@ import { before, test } from 'node:test';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { seedDemo } from '../../scripts/seed';
-import { deactivateAdministrator } from '../../functions/src/users';
+import { changeUserState } from '../../functions/src/users';
 import { generateRecoveryChallenge, isRecoveryChallengeValid } from '../../functions/src/recovery';
 import { createClock } from '../../src/domain/clock';
 
@@ -63,12 +63,12 @@ test('dos desactivaciones concurrentes preservan dos administradores y el contad
   for (const doc of existing.docs) if (!['demo-admin-1','demo-admin-2'].includes(doc.id)) await doc.ref.update({ state: 'suspended' });
   const third = await post('users/create', account('tercero@example.test', 'admin'), admin);
   assert.equal(third.codigo, 'OK');
-  const results = await Promise.all(['demo-admin-2', third.datos.profile.id].map(id => deactivateAdministrator(`Bearer ${admin}`, id)));
+  const results = await Promise.all(['demo-admin-2', third.datos.profile.id].map(id => changeUserState(`Bearer ${admin}`, { id, state: 'suspended' })));
   assert.deepEqual(results.map(r => r.codigo).sort(), ['MINIMO_ADMINISTRADORES', 'OK']);
   const admins = await db.collection('users').where('role', '==', 'admin').where('state', '==', 'active').get();
   assert.equal(admins.size, 2);
   assert.equal((await db.doc('administrativeControl/admins').get()).data()?.activeCount, 2);
-  assert.equal((await deactivateAdministrator(`Bearer ${(await login('student@usc.edu.co')).idToken}`, 'demo-admin-1')).codigo, 'NO_AUTORIZADO');
+  assert.equal((await changeUserState(`Bearer ${(await login('student@usc.edu.co')).idToken}`, { id: 'demo-admin-1', state: 'suspended' })).codigo, 'NO_AUTORIZADO');
   await seedDemo();
 });
 
@@ -119,7 +119,7 @@ test('un alta incompleta no cuenta como administrador disponible', async () => {
   await seedDemo();
   await db.doc('users/admin-incompleto').set({ role: 'admin', state: 'active', provisioning: true });
   const token = (await login('admin1@usc.edu.co')).idToken;
-  try { assert.equal((await deactivateAdministrator(`Bearer ${token}`, 'demo-admin-2')).codigo, 'MINIMO_ADMINISTRADORES'); }
+  try { assert.equal((await changeUserState(`Bearer ${token}`, { id: 'demo-admin-2', state: 'suspended' })).codigo, 'MINIMO_ADMINISTRADORES'); }
   finally { await db.doc('users/admin-incompleto').delete(); }
 });
 

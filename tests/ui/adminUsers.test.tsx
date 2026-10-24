@@ -61,3 +61,28 @@ test('bloquea doble envío y conserva el formulario ante conflicto', async () =>
   expect(await screen.findByText('La cuenta cambió. Consulta el listado.')).toBeTruthy();
   expect(screen.getByLabelText('Correo electrónico').props.value).toBe(user.email);
 });
+
+test('suspender pide confirmación, envía el cambio y refleja el nuevo estado', async () => {
+  const service = jest.fn()
+    .mockResolvedValueOnce(response('OK', 'Usuarios consultados.', { users: [user] }))
+    .mockResolvedValueOnce(response('OK', 'Cuenta suspendida.'))
+    .mockResolvedValueOnce(response('OK', 'Usuarios consultados.', { users: [{ ...user, state: 'suspended' }] }));
+  await render(<UsersScreen service={service} />);
+  await fireEvent.press(await screen.findByRole('button', { name: 'Suspender Estudiante Demo' }));
+  expect(service).toHaveBeenCalledTimes(1);
+  expect(screen.getByText(/Perderá el acceso de inmediato/)).toBeTruthy();
+  await fireEvent.press(screen.getByRole('button', { name: 'Confirmar suspensión' }));
+  expect(service).toHaveBeenCalledWith('users/state', { id: 'student', state: 'suspended' });
+  expect(await screen.findByText('Cuenta suspendida.')).toBeTruthy();
+  expect(await screen.findByText('Estudiante · Suspendido')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Reactivar Estudiante Demo' })).toBeTruthy();
+});
+
+test('cancelar no envía nada y los restaurantes no muestran suspender', async () => {
+  const service = jest.fn().mockResolvedValue(response('OK', 'Usuarios consultados.', { users: [user, { ...user, id: 'r1', name: 'Restaurante Demo', role: 'restaurant' }] }));
+  await render(<UsersScreen service={service} />);
+  await fireEvent.press(await screen.findByRole('button', { name: 'Suspender Estudiante Demo' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Cancelar' }));
+  expect(service).not.toHaveBeenCalledWith('users/state', expect.anything());
+  expect(screen.queryByRole('button', { name: 'Suspender Restaurante Demo' })).toBeNull();
+});

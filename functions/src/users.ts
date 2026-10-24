@@ -88,24 +88,39 @@ export async function updateUserContact(authorization: string | undefined, input
   }
 }
 
-// Pieza interna. No se publica una acción de suspensión general hasta
-// integrar cancelaciones y reembolsos.
-export async function deactivateAdministrator(authorization: string | undefined, id: string) {
+// Suspender o reactivar estudiantes y administradores. La suspensión de restaurantes
+// y la cancelación de pedidos activos llegarán con sus módulos.
+export async function changeUserState(authorization: string | undefined, input: unknown) {
   const actor = await checkedIdentity(authorization, {});
   if (actor.role !== 'admin') return response('NO_AUTORIZADO', 'Solo un administrador puede gestionar cuentas.');
-  if (!id || id.includes('/')) return response('VALIDACION', 'Cuenta inválida.');
-  const { db } = adminServices();
-  return db.runTransaction(async tx => {
+  const { id, state } = (input ?? {}) as { id?: unknown; state?: unknown };
+  if (typeof id !== 'string' || !id || id.includes('/') || !['active', 'suspended'].includes(String(state))) return response('VALIDACION', 'Indica la cuenta y si se suspende o se reactiva.');
+  if (id === actor.id) return response('VALIDACION', 'No puedes suspender tu propia cuenta.');
+  const { auth, db } = adminServices();
+  const result = await db.runTransaction(async tx => {
     const ref = db.doc(`users/${id}`);
     const target = (await tx.get(ref)).data();
     const currentActor = (await tx.get(db.doc(`users/${actor.id}`))).data();
     const control = await readAdminControl(tx, db);
     if (currentActor?.role !== 'admin' || currentActor.state !== 'active') return response('NO_AUTORIZADO', 'La cuenta no puede gestionar usuarios.');
-    if (target?.role !== 'admin' || target.provisioning) return response('VALIDACION', 'Esta operación solo admite administradores disponibles.');
-    if (target.state !== 'active') return response('OK', 'La cuenta ya está inactiva.');
-    if (control.activeCount <= 2) return response('MINIMO_ADMINISTRADORES', 'Deben permanecer al menos dos administradores activos.');
-    tx.update(ref, { state: 'suspended', version: Number(target.version ?? 1) + 1 });
-    tx.set(control.ref, { activeCount: control.activeCount - 1, version: control.version + 1 });
-    return response('OK', 'Administrador desactivado.');
+    if (!target || target.provisioning || target.state === 'deleted') return response('VALIDACION', 'La cuenta no está disponible.');
+    if (!['student', 'admin'].includes(target.role)) return response('VALIDACION', 'La suspensión de restaurantes estará disponible con su gestión.');
+    if (target.state !== state) {
+      const change = target.role === 'admin' ? (state === 'active' ? 1 : -1) : 0;
+      if (change < 0 && control.activeCount <= 2) return response('MINIMO_ADMINISTRADORES', 'Deben permanecer al menos dos administradores activos.');
+      tx.update(ref, { state, version: Number(target.version ?? 1) + 1 });
+      if (change) tx.set(control.ref, { activeCount: control.activeCount + change, version: control.version + 1 });
+    }
+    return response('OK', state === 'suspended' ? 'Cuenta suspendida.' : 'Cuenta reactivada.');
   });
+  if (result.codigo !== 'OK') return result;
+  // El perfil ya bloquea cada operación; Auth impide además iniciar sesión y revoca los tokens.
+  // Repetir la misma acción completa este paso si se interrumpió.
+  try {
+    await auth.updateUser(id, { disabled: state === 'suspended' });
+    if (state === 'suspended') await auth.revokeRefreshTokens(id);
+  } catch {
+    return response('EN_PROCESO', 'El estado se guardó, pero falta sincronizar el acceso. Repite la acción para completarla.', null, true);
+  }
+  return result;
 }
