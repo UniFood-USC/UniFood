@@ -1,34 +1,21 @@
-import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors } from '../../../constants/theme';
 import { routes } from '../../../constants/routes';
 import { Order } from '../../../types/domain';
+import { EstimateNotice } from '../../../components/EstimateNotice';
+import { OrderActions } from '../../../components/OrderActions';
 import { OrderStatusStepper } from './OrderStatusStepper';
-import { mockOrders, restaurantName } from '../../../services/orders/orderRepository';
-import { STATUS_FLOW, isTerminal, statusLabel } from '../../../services/orders/statusFlow';
+import { MOCK_ACTORS, mockOrders, restaurantName } from '../../../services/orders/orderRepository';
+import { STATUS_FLOW, statusLabel } from '../../../services/orders/statusFlow';
 import { useOrderTracking } from './useOrderTracking';
 
 const fmt = (iso: string) =>
   new Date(iso).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' });
 
-function useIsLate(order: Order | null) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 30_000);
-    return () => clearInterval(t);
-  }, []);
-  return (
-    !!order?.estimatedReadyAt &&
-    !isTerminal(order.status) &&
-    now > new Date(order.estimatedReadyAt).getTime()
-  );
-}
-
 export default function OrderTrackingScreen({ orderId = 'UC1023' }: { orderId?: string }) {
   const router = useRouter();
   const { order, error, loading } = useOrderTracking(mockOrders.repo, orderId);
-  const late = useIsLate(order);
 
   const goBack = () => (router.canGoBack() ? router.back() : router.replace(routes.orders));
 
@@ -40,7 +27,6 @@ export default function OrderTrackingScreen({ orderId = 'UC1023' }: { orderId?: 
 
   const cancelled = order.status === 'cancelled';
   const scheduledWaiting = order.status === 'received' && !!order.scheduledFor;
-  const waitingForReady = order.status === 'received' || order.status === 'preparing';
   const history = { received: order.createdAt, ...order.statusHistory };
 
   return (
@@ -71,21 +57,18 @@ export default function OrderTrackingScreen({ orderId = 'UC1023' }: { orderId?: 
         <View style={styles.card}>
           <Text accessibilityRole="header" style={styles.heading}>{statusLabel('cancelled', order.mode)}</Text>
           {order.cancelReason ? <Text style={styles.body}>Motivo: {order.cancelReason}</Text> : null}
+          {order.refund ? (
+            <Text style={styles.body}>Reembolso simulado: ${order.refund.amount.toLocaleString('es-CO')}</Text>
+          ) : null}
         </View>
       ) : (
         <>
           <OrderStatusStepper mode={order.mode} status={order.status} history={history} />
-          {late ? (
-            <View style={styles.notice} accessibilityLiveRegion="polite">
-              <Text style={styles.body}>Tu pedido está tardando más de lo estimado. Gracias por tu paciencia.</Text>
-            </View>
-          ) : waitingForReady ? (
-            <View style={styles.notice}>
-              <Text style={styles.body}>Te avisaremos cuando esté listo.</Text>
-            </View>
-          ) : null}
+          <EstimateNotice order={order} />
         </>
       )}
+
+      <OrderActions order={order} actor={MOCK_ACTORS.student} />
 
       {__DEV__ && <DevControls order={order} />}
     </ScrollView>

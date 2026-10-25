@@ -32,17 +32,23 @@ function seed(): Order[] {
   const base = { studentId: MOCK_STUDENT_ID, paymentMethod: 'nequi' as const, total: 32000, paid: true, version: 0 };
   return [
     { ...base, id: 'UC1023', restaurantId: 'rest-burger', mode: 'pickup', status: 'ready',
-      estimatedReadyAt: inFuture(5),
+      estimateMinutes: 15, estimatedReadyAt: inFuture(5),
       statusHistory: { received: ago(20), preparing: ago(15), ready: ago(2) }, createdAt: ago(20), updatedAt: ago(2) },
+    // Recién recibido: la estimación se registra al iniciar la preparación
     { ...base, id: 'UC1024', restaurantId: 'rest-burger', mode: 'delivery', status: 'received',
-      estimatedReadyAt: inFuture(25),
+      estimatedReadyAt: null,
       statusHistory: { received: ago(1) }, createdAt: ago(1), updatedAt: ago(1) },
     { ...base, id: 'UC1025', restaurantId: 'rest-burger', mode: 'pickup', status: 'received',
       scheduledFor: inFuture(180), estimatedReadyAt: null,
       statusHistory: { received: ago(30) }, createdAt: ago(30), updatedAt: ago(30) },
+    // En preparación con la estimación agotada (aviso de demora)
     { ...base, id: 'UC1026', restaurantId: 'rest-burger', mode: 'delivery', status: 'preparing',
-      estimatedReadyAt: ago(5),
+      estimateMinutes: 25, estimatedReadyAt: ago(5),
       statusHistory: { received: ago(40), preparing: ago(30) }, createdAt: ago(40), updatedAt: ago(30) },
+    // En preparación con tiempo restante
+    { ...base, id: 'UC1028', restaurantId: 'rest-burger', mode: 'pickup', status: 'preparing',
+      estimateMinutes: 20, estimatedReadyAt: inFuture(12),
+      statusHistory: { received: ago(10), preparing: ago(8) }, createdAt: ago(10), updatedAt: ago(8) },
     // Efectivo sin pago registrado: el restaurante debe registrarlo antes de entregar
     { ...base, id: 'UC1027', restaurantId: 'rest-burger', mode: 'pickup', status: 'ready',
       paymentMethod: 'cash', paid: false, total: 18000,
