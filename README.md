@@ -63,41 +63,39 @@ Abre [UniFood](http://localhost:8081), [registro estudiantil](http://localhost:8
 
 ### 3. Ver la app en Expo Go desde el teléfono
 
-Sí: la base actual usa bibliotecas compatibles con Expo Go. Necesitas **Expo Go compatible con SDK 57 en el teléfono**, y el Mac y el teléfono en la **misma red Wi-Fi**. Los servidores y dependencias permanecen en Docker; Expo Go es la app que muestra el resultado en el teléfono. No se ha certificado aún una prueba física Android/iOS de esta entrega.
+Necesitas **Expo Go para SDK 58** en el teléfono, y el Mac y el teléfono en la **misma red Wi-Fi**.
 
-Busca la **dirección IP del Mac** en Ajustes del Sistema → Wi-Fi → Detalles → TCP/IP. Usa esa dirección, no la del router ni una dirección interna del contenedor. Sustituye la IP del ejemplo:
+1. Busca la IP del Mac en Ajustes del Sistema → Wi-Fi → Detalles → TCP/IP y guárdala en el `.env` de la carpeta UniFood (no uses `localhost` ni `127.0.0.1`):
 
-```sh
-docker compose down
-export UNIFOOD_HOST=192.168.1.50
-docker compose up -d workspace
-docker compose logs -f workspace
-```
+   ```sh
+   UNIFOOD_HOST=192.168.1.50
+   ```
 
-Cuando aparezca `All emulators ready`, sal de los logs con **Ctrl+C**:
+2. Inicia los servicios:
 
-```sh
-docker compose exec workspace npm run seed
-```
+   ```sh
+   docker compose up -d workspace app
+   ```
 
-**En iPhone**, Expo exige que el CLI y Expo Go tengan iniciada sesión con la misma cuenta de Expo. Inicia sesión desde Docker antes de arrancar la app y usa esa misma cuenta en Expo Go:
+3. **Solo en iPhone y solo la primera vez:** inicia sesión en Expo con la misma cuenta que usas en Expo Go. Escribe usuario y contraseña cuando los pida:
 
-```sh
-docker compose run --rm -e CI=0 app npx expo login
-```
+   ```sh
+   docker compose run --rm -e CI=0 app npx expo login --no-browser
+   ```
 
-El volumen `expo-state` conserva la sesión del CLI dentro de Docker. No escribas contraseñas en el README ni en comandos guardados. Después, inicia Expo y muestra su QR:
+4. Muestra el QR y escanéalo con Expo Go en Android o con la cámara en iPhone:
 
-```sh
-docker compose up -d app
-docker compose logs -f app
-```
+   ```sh
+   docker compose logs -f app
+   ```
 
-Escanea el QR con Expo Go en Android o con la cámara en iPhone. Debe anunciar `exp://192.168.1.50:8081` usando **tu IP real**. Si Expo Go ofrece entrada manual de URL, también puedes usar esa dirección. Desde el navegador del teléfono o del Mac puedes abrir `http://TU_IP_DEL_MAC:8081`.
+5. **Solo la primera vez**, carga las cuentas y restaurantes de prueba:
 
-`UNIFOOD_HOST` configura juntos el enlace QR, la dirección del servicio en la app y los puertos publicados por Docker. No pongas `localhost`, `127.0.0.1` ni `0.0.0.0` para el teléfono. Cambiar la IP requiere volver a ejecutar `docker compose up -d workspace app` y recargar Expo Go. La variable dura solo en esa terminal; si abres otra para gestionar los servicios, repite el `export` con la misma IP.
+   ```sh
+   docker compose exec workspace npm run seed
+   ```
 
-Esta opción permite acceder a los emuladores desde la red elegida: úsala en una red privada de confianza, con datos ficticios. El panel de administración de Firebase sigue restringido al Mac en `localhost:4000`.
+Si cambias de red, actualiza la IP en `.env`, repite el paso 2 y recarga Expo Go. Usa esta opción solo en una red privada de confianza.
 
 ### Ver la base de datos y los usuarios registrados
 
@@ -172,5 +170,5 @@ docker compose run --rm workspace npx expo install --check
 
 ## Referencias
 
-- [Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/)
+- [Expo SDK 58](https://docs.expo.dev/versions/v58.0.0/)
 - [Expo Router](https://docs.expo.dev/router/installation/)

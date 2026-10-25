@@ -6,6 +6,7 @@ module.exports = {
     '<rootDir>/tests/student/**/*.test.ts?(x)',
     '<rootDir>/tests/orders/**/*.test.ts',
   ],
+  setupFiles: ['<rootDir>/tests/jestSetup.js'],
   clearMocks: true,
   // El primer render carga el runtime nativo simulado dentro de Docker.
   testTimeout: 15000,
