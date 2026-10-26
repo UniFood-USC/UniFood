@@ -24,6 +24,7 @@ function Navigator() {
     </Stack.Protected>
     <Stack.Protected guard={identity?.role === 'restaurant'}>
       <Stack.Screen name="restaurant" options={{ headerShown: false }} />
+      <Stack.Screen name="restaurant-sales" options={{ title: 'Historial de ventas' }} />
     </Stack.Protected>
     <Stack.Protected guard={identity?.role === 'admin'}>
       <Stack.Screen name="admin" options={{ headerShown: false }} />

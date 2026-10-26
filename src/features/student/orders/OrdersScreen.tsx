@@ -4,8 +4,10 @@ import { useRouter } from 'expo-router';
 import { colors } from '../../../constants/theme';
 import { routes } from '../../../constants/routes';
 import { Order } from '../../../types/domain';
+import { canRateOrder } from '../../../domain/ratings';
 import { MOCK_STUDENT_ID, mockOrders, restaurantName } from '../../../services/orders/orderRepository';
 import { isTerminal, statusLabel } from '../../../services/orders/statusFlow';
+import { OrderRatingEditor } from './OrderRatingEditor';
 import { useOrders } from '../../../services/orders/useOrders';
 
 type Tab = 'active' | 'history';
@@ -70,14 +72,19 @@ export default function OrdersScreen() {
         <Empty text={tab === 'active' ? 'No tienes pedidos activos.' : 'Aún no tienes pedidos en tu historial.'} />
       ) : (
         visible.map((o) => (
-          <OrderCard key={o.id} order={o} onOpen={() => router.push(routes.orderTracking(o.id))} />
+          <OrderCard
+            key={o.id}
+            order={o}
+            canRate={tab === 'history' && canRateOrder(o, MOCK_STUDENT_ID)}
+            onOpen={() => router.push(routes.orderTracking(o.id))}
+          />
         ))
       )}
     </ScrollView>
   );
 }
 
-function OrderCard({ order, onOpen }: { order: Order; onOpen: () => void }) {
+function OrderCard({ order, canRate, onOpen }: { order: Order; canRate: boolean; onOpen: () => void }) {
   const name = restaurantName(order.restaurantId);
   const scheduled = order.status === 'received' && !!order.scheduledFor;
   const when = scheduled ? `Programado · ${formatWhen(order.scheduledFor!)}` : formatWhen(order.createdAt);
@@ -106,6 +113,13 @@ function OrderCard({ order, onOpen }: { order: Order; onOpen: () => void }) {
       >
         <Text style={styles.detailBtnText}>Ver detalles</Text>
       </Pressable>
+      {canRate && (
+        <OrderRatingEditor
+          order={order}
+          studentId={MOCK_STUDENT_ID}
+          authorName="Estudiante de prueba"
+        />
+      )}
     </View>
   );
 }

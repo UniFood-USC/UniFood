@@ -2,9 +2,12 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors } from '../constants/theme';
 import { Order } from '../types/domain';
-import { Actor, Change, allowedActions } from '../services/orders/changeOrder';
-import { mockOrders } from '../services/orders/orderRepository';
+import { Actor, Change, MAX_ESTIMATE, MIN_ESTIMATE, allowedActions, isValidEstimate } from '../services/orders/changeOrder';
+import { OrderRepository, mockOrders } from '../services/orders/orderRepository';
 import { statusLabel } from '../services/orders/statusFlow';
+
+const ESTIMATE_HINT = `Minutos enteros, de ${MIN_ESTIMATE} a ${MAX_ESTIMATE}`;
+const parseMinutes = (text: string) => (/^\d+$/.test(text.trim()) ? Number(text.trim()) : NaN);
 
 function advanceLabel(order: Order, next: Order['status']) {
   if (next === 'preparing') return 'Iniciar preparación';
@@ -12,22 +15,25 @@ function advanceLabel(order: Order, next: Order['status']) {
   return `Marcar: ${statusLabel(next, order.mode)}`;
 }
 
-export function OrderActions({ order, actor }: { order: Order; actor: Actor }) {
+export function OrderActions({ order, actor, repository = mockOrders.repo }: {
+  order: Order; actor: Actor; repository?: OrderRepository;
+}) {
   const [cancelling, setCancelling] = useState(false);
   const [reason, setReason] = useState('');
   const [code, setCode] = useState('');
+  const [minutes, setMinutes] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const a = allowedActions(order, actor);
-  if (!a.canAdvance && !a.canCancel && !a.needsPayment) return null;
+  if (!a.canAdvance && !a.canCancel && !a.needsPayment && !a.canUpdateEstimate) return null;
 
   async function run(change: Change) {
     setBusy(true);
-    const res = await mockOrders.repo.change(order.id, change, actor, order.version);
+    const res = await repository.change(order.id, change, actor, order.version);
     setBusy(false);
     if (!res.ok) { setMessage(res.message); return; }
-    setMessage(null); setCancelling(false); setReason(''); setCode('');
+    setMessage(null); setCancelling(false); setReason(''); setCode(''); setMinutes('');
   }
 
   function advance() {
@@ -35,7 +41,19 @@ export function OrderActions({ order, actor }: { order: Order; actor: Actor }) {
       setMessage('El número no coincide con el que muestra el estudiante.');
       return;
     }
+    if (a.needsEstimate) {
+      const n = parseMinutes(minutes);
+      if (!isValidEstimate(n)) { setMessage(`Indica el tiempo estimado. ${ESTIMATE_HINT}.`); return; }
+      run({ type: 'advance', estimateMinutes: n });
+      return;
+    }
     run({ type: 'advance' });
+  }
+
+  function updateEstimate() {
+    const n = parseMinutes(minutes);
+    if (!isValidEstimate(n)) { setMessage(`Indica el nuevo tiempo estimado. ${ESTIMATE_HINT}.`); return; }
+    run({ type: 'updateEstimate', minutes: n });
   }
 
   return (
@@ -47,6 +65,18 @@ export function OrderActions({ order, actor }: { order: Order; actor: Actor }) {
         </>
       )}
 
+      {a.canUpdateEstimate && !cancelling && (
+        <>
+          <TextInput
+            value={minutes} onChangeText={setMinutes} keyboardType="number-pad"
+            placeholder="Nueva estimación en minutos"
+            accessibilityLabel={`Nueva estimación de preparación en minutos. ${ESTIMATE_HINT}`}
+            placeholderTextColor={colors.muted} style={styles.input}
+          />
+          <Btn label="Actualizar estimación" secondary disabled={busy} onPress={updateEstimate} />
+        </>
+      )}
+
       {a.canAdvance && a.nextStatus && !cancelling && (
         <>
           {a.nextStatus === 'collected' && (
@@ -54,6 +84,14 @@ export function OrderActions({ order, actor }: { order: Order; actor: Actor }) {
               value={code} onChangeText={setCode} autoCapitalize="characters"
               placeholder="Número de pedido que muestra el estudiante"
               accessibilityLabel="Número de pedido que muestra el estudiante"
+              placeholderTextColor={colors.muted} style={styles.input}
+            />
+          )}
+          {a.needsEstimate && (
+            <TextInput
+              value={minutes} onChangeText={setMinutes} keyboardType="number-pad"
+              placeholder="Tiempo estimado de preparación (minutos)"
+              accessibilityLabel={`Tiempo estimado de preparación en minutos. ${ESTIMATE_HINT}`}
               placeholderTextColor={colors.muted} style={styles.input}
             />
           )}
