@@ -1,4 +1,4 @@
-import { addProduct, cartTotals, emptyCart, formatCOP, lineAmounts, resolveCart, setQuantity, storedCart, validateStoredCart, type Product } from '../../src/domain/cart';
+import { addProduct, cartTotals, emptyCart, formatCOP, lineAmounts, resolveCart, setQuantity, storedCart, validateCartSave, validateStoredCart, type Product } from '../../src/domain/cart';
 
 const burger: Product = { id: 'doble', restaurantId: 'rest-burger', name: 'Doble', priceCOP: 20000, discountPercent: 0 };
 const fries: Product = { id: 'papas', restaurantId: 'rest-burger', name: 'Papas', priceCOP: 6000, discountPercent: 0 };
@@ -93,4 +93,14 @@ test.each([
   ['sin datos', null],
 ])('se rechaza un carrito con %s', (_, input) => {
   expect(() => validateStoredCart(input)).toThrow();
+});
+
+test('guardar exige la versión del carrito que tiene el dispositivo', () => {
+  const cart = { restaurantId: 'r', lines: [{ productId: 'p', quantity: 2 }] };
+  expect(validateCartSave({ ...cart, version: 3 })).toEqual({ cart, version: 3 });
+  expect(validateCartSave({ restaurantId: null, lines: [], version: 0 })).toEqual({ cart: { restaurantId: null, lines: [] }, version: 0 });
+});
+
+test.each([undefined, -1, 1.5, '2', null])('se rechaza guardar con la versión %p', version => {
+  expect(() => validateCartSave({ restaurantId: 'r', lines: [{ productId: 'p', quantity: 1 }], version })).toThrow('Actualiza el carrito antes de guardar.');
 });

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import { Feedback } from '../../components/Feedback';
 import { colors } from '../../constants/theme';
@@ -9,32 +10,45 @@ import type { ServiceResponse } from '../../domain/response';
 import { exampleProducts } from './exampleProducts';
 
 type Service = (action: 'cart/get' | 'cart/save', input: unknown) => Promise<ServiceResponse>;
+type Stored = { cart: StoredCart; version: number };
 const unsaved = 'No se guardó el último cambio del carrito. Revisa la conexión y reintenta.';
+const changedElsewhere = 'Tu carrito cambió en otro dispositivo. Revisa los cambios antes de continuar.';
 
 export default function CartScreen({ service, products = exampleProducts }: { service: Service; products?: Product[] }) {
   const [cart, setCart] = useState<Cart>(emptyCart);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [saveError, setSaveError] = useState('');
+  const [notice, setNotice] = useState('');
   const mounted = useRef(true);
-  // Los cambios se envían en orden para que el último quede como el guardado.
+  const version = useRef(0);
+  // Los cambios se envían en orden; si otro dispositivo ganó, los pendientes se descartan
+  // (cambia la ronda) para que el estudiante revise el carrito vigente antes de seguir.
   const queue = useRef(Promise.resolve());
+  const round = useRef(0);
+  const pending = useRef(0);
+  const show = useCallback((stored: Stored) => { version.current = stored.version; setCart(resolveCart(stored.cart, products)); }, [products]);
+  // Se consulta al entrar y cada vez que se vuelve a la pestaña, salvo con cambios aún por guardar.
   const load = useCallback(() => service('cart/get', {}).then(result => {
-    if (!mounted.current) return;
-    if (result.codigo === 'OK') setCart(resolveCart((result.datos as { cart: StoredCart }).cart, products));
+    if (!mounted.current || pending.current) return;
+    if (result.codigo === 'OK') show(result.datos as Stored);
     else setLoadError(result.mensaje);
   }).catch(() => {
     if (mounted.current) setLoadError('No pudimos consultar tu carrito. Revisa la conexión y reintenta.');
-  }).finally(() => { if (mounted.current) setLoading(false); }), [service, products]);
-  useEffect(() => {
-    mounted.current = true;
-    void load();
-    return () => { mounted.current = false; };
-  }, [load]);
+  }).finally(() => { if (mounted.current) setLoading(false); }), [service, show]);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  useFocusEffect(useCallback(() => { void load(); }, [load]));
   function save(next: Cart) {
-    queue.current = queue.current.then(() => service('cart/save', storedCart(next))).then(result => {
-      if (mounted.current) setSaveError(result.codigo === 'OK' ? '' : unsaved);
-    }, () => { if (mounted.current) setSaveError(unsaved); });
+    const sentIn = round.current;
+    pending.current += 1;
+    queue.current = queue.current.then(async () => {
+      if (sentIn !== round.current) return;
+      const result = await service('cart/save', { ...storedCart(next), version: version.current });
+      if (!mounted.current) return;
+      if (result.codigo === 'OK') { version.current = (result.datos as Stored).version; setSaveError(''); setNotice(''); }
+      else if (result.codigo === 'CONFLICTO_VERSION') { round.current += 1; show(result.datos as Stored); setSaveError(''); setNotice(changedElsewhere); }
+      else setSaveError(unsaved);
+    }).catch(() => { if (mounted.current) setSaveError(unsaved); }).finally(() => { pending.current -= 1; });
   }
   function change(next: Cart) { setCart(next); save(next); }
   const totals = cartTotals(cart.lines);
@@ -49,6 +63,7 @@ export default function CartScreen({ service, products = exampleProducts }: { se
     <ScrollView contentContainerStyle={styles.content}>
       <Text accessibilityRole="header" style={styles.title}>Tu carrito</Text>
       <View style={styles.notice}><Text style={styles.noticeText}>Productos de ejemplo: los reales llegarán con el menú de cada restaurante.</Text></View>
+      {!!notice && <View style={styles.notice}><Text accessibilityRole="alert" style={styles.noticeText}>{notice}</Text></View>}
       {!!saveError && <Feedback state="error" message={saveError} onRetry={() => save(cart)} />}
       {!cart.lines.length ? <Feedback state="empty" message="Tu carrito está vacío." /> : cart.lines.map(line => {
         const { discountCOP } = lineAmounts(line);
