@@ -2,7 +2,7 @@
 const resultKinds = {
   OK: 'exito', EN_PROCESO: 'pendiente', CONFIRMACION_INCIERTA: 'pendiente',
   CORREO_EN_USO: 'conflicto', CONFLICTO_VERSION: 'conflicto', CONFLICTO_PROMOCION: 'conflicto',
-  REQUIERE_REVISION: 'conflicto', SIN_CUPO: 'conflicto',
+  REQUIERE_REVISION: 'conflicto', SIN_CUPO: 'conflicto', CLAVE_EN_USO: 'conflicto',
   VALIDACION: 'error', CREDENCIALES_INVALIDAS: 'error', SESION_REQUERIDA: 'error',
   NO_AUTORIZADO: 'error', ACCESO_BLOQUEADO: 'error', SERVICIO_NO_DISPONIBLE: 'error',
   RECUPERACION_INVALIDA: 'error', RESTAURANTE_CERRADO: 'error', DESTINO_NO_DISPONIBLE: 'error',
