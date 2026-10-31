@@ -3,6 +3,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { emailKey } from '../functions/src/identity';
 import { readAdminControl } from '../functions/src/adminControl';
+import { exampleProducts } from '../src/features/cart/exampleProducts';
 
 export async function seedDemo() {
   if (process.env.GCLOUD_PROJECT !== 'demo-unifood' || !process.env.FIREBASE_AUTH_EMULATOR_HOST || !process.env.FIRESTORE_EMULATOR_HOST) {
@@ -28,6 +29,8 @@ export async function seedDemo() {
       if (control) tx.set(control.ref, { activeCount: control.activeCount + (old?.role === 'admin' && old.state === 'active' ? 0 : 1), version: control.version + 1 });
     });
   }
+  // El estudiante demo empieza con un carrito de ejemplo mientras no exista el menú.
+  await getFirestore().doc('carts/demo-student').set({ userId: 'demo-student', restaurantId: 'rest-burger', lines: exampleProducts.map(product => ({ productId: product.id, quantity: 1 })), version: 1, updatedAt: '2026-10-04T00:00:00Z' });
   await seedRestaurants();
 }
 
