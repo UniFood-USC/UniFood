@@ -68,6 +68,14 @@ export function validateStoredCart(input: unknown): StoredCart {
   return { restaurantId: restaurantId as string | null, lines: valid };
 }
 
+// La versión es la del carrito que el dispositivo tenía a la vista: si otro
+// dispositivo guardó después, el servicio rechaza el cambio en lugar de pisarlo.
+export function validateCartSave(input: unknown) {
+  const { version, ...cart } = (input ?? {}) as Record<string, unknown>;
+  if (!Number.isInteger(version) || (version as number) < 0) throw new Error('Actualiza el carrito antes de guardar.');
+  return { cart: validateStoredCart(cart), version: version as number };
+}
+
 // Un solo redondeo por línea, al peso más cercano y con medio peso hacia arriba.
 export function lineAmounts({ priceCOP, quantity, discountPercent }: CartLine) {
   if (!Number.isInteger(priceCOP) || priceCOP < 1) throw new Error('El precio debe ser un entero positivo.');
