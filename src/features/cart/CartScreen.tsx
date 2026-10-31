@@ -1,29 +1,58 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
 import { Feedback } from '../../components/Feedback';
 import { colors } from '../../constants/theme';
-import { addProduct, cartTotals, emptyCart, formatCOP, lineAmounts, setQuantity, type Cart, type Product } from '../../domain/cart';
+import { cartTotals, emptyCart, formatCOP, lineAmounts, resolveCart, setQuantity, storedCart, type Cart, type Product, type StoredCart } from '../../domain/cart';
+import type { ServiceResponse } from '../../domain/response';
+import { exampleProducts } from './exampleProducts';
 
-// Productos de ejemplo hasta que existan el menú y las promociones (RF-06, RF-24).
-const examples: Product[] = [
-  { id: 'doble', restaurantId: 'rest-burger', name: 'Doble', priceCOP: 20000, discountPercent: 15 },
-  { id: 'papas', restaurantId: 'rest-burger', name: 'Papas', priceCOP: 6000, discountPercent: 0 },
-  { id: 'gaseosa', restaurantId: 'rest-burger', name: 'Gaseosa', priceCOP: 4000, discountPercent: 0 },
-];
-const exampleCart = examples.reduce((cart, product) => addProduct(cart, product).cart, emptyCart);
+type Service = (action: 'cart/get' | 'cart/save', input: unknown) => Promise<ServiceResponse>;
+const unsaved = 'No se guardó el último cambio del carrito. Revisa la conexión y reintenta.';
 
-export default function CartScreen({ initialCart = exampleCart }: { initialCart?: Cart }) {
-  const [cart, setCart] = useState(initialCart);
+export default function CartScreen({ service, products = exampleProducts }: { service: Service; products?: Product[] }) {
+  const [cart, setCart] = useState<Cart>(emptyCart);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [saveError, setSaveError] = useState('');
+  const mounted = useRef(true);
+  // Los cambios se envían en orden para que el último quede como el guardado.
+  const queue = useRef(Promise.resolve());
+  const load = useCallback(() => service('cart/get', {}).then(result => {
+    if (!mounted.current) return;
+    if (result.codigo === 'OK') setCart(resolveCart((result.datos as { cart: StoredCart }).cart, products));
+    else setLoadError(result.mensaje);
+  }).catch(() => {
+    if (mounted.current) setLoadError('No pudimos consultar tu carrito. Revisa la conexión y reintenta.');
+  }).finally(() => { if (mounted.current) setLoading(false); }), [service, products]);
+  useEffect(() => {
+    mounted.current = true;
+    void load();
+    return () => { mounted.current = false; };
+  }, [load]);
+  function save(next: Cart) {
+    queue.current = queue.current.then(() => service('cart/save', storedCart(next))).then(result => {
+      if (mounted.current) setSaveError(result.codigo === 'OK' ? '' : unsaved);
+    }, () => { if (mounted.current) setSaveError(unsaved); });
+  }
+  function change(next: Cart) { setCart(next); save(next); }
   const totals = cartTotals(cart.lines);
+  if (loading || loadError) return <SafeAreaView edges={['top']} style={styles.screen}>
+    <View style={styles.content}>
+      <Text accessibilityRole="header" style={styles.title}>Tu carrito</Text>
+      {loading ? <Feedback state="loading" message="Consultando tu carrito…" />
+        : <Feedback state="error" message={loadError} onRetry={() => { setLoading(true); setLoadError(''); void load(); }} />}
+    </View>
+  </SafeAreaView>;
   return <SafeAreaView edges={['top']} style={styles.screen}>
     <ScrollView contentContainerStyle={styles.content}>
       <Text accessibilityRole="header" style={styles.title}>Tu carrito</Text>
-      <View style={styles.notice}><Text style={styles.noticeText}>Carrito de ejemplo: los productos reales llegarán con el menú de cada restaurante.</Text></View>
+      <View style={styles.notice}><Text style={styles.noticeText}>Productos de ejemplo: los reales llegarán con el menú de cada restaurante.</Text></View>
+      {!!saveError && <Feedback state="error" message={saveError} onRetry={() => save(cart)} />}
       {!cart.lines.length ? <Feedback state="empty" message="Tu carrito está vacío." /> : cart.lines.map(line => {
         const { discountCOP } = lineAmounts(line);
-        const change = (quantity: number) => setCart(setQuantity(cart, line.productId, quantity));
+        const changeTo = (quantity: number) => change(setQuantity(cart, line.productId, quantity));
         return <View key={line.productId} style={styles.card}>
           <View style={styles.thumb}><Text style={styles.initial}>{line.name.charAt(0)}</Text></View>
           <View style={styles.info}>
@@ -31,17 +60,17 @@ export default function CartScreen({ initialCart = exampleCart }: { initialCart?
             <Text style={styles.price}>{formatCOP(line.priceCOP)}</Text>
             {discountCOP > 0 && <Text style={styles.discount}>-{line.discountPercent} % en esta línea</Text>}
             <View style={styles.stepper}>
-              <Pressable accessibilityRole="button" accessibilityLabel={`Disminuir cantidad de ${line.name}`} onPress={() => change(line.quantity - 1)} style={styles.step}>
+              <Pressable accessibilityRole="button" accessibilityLabel={`Disminuir cantidad de ${line.name}`} onPress={() => changeTo(line.quantity - 1)} style={styles.step}>
                 <Feather name="minus" size={16} color={colors.ink} accessible={false} />
               </Pressable>
               <Text accessibilityLabel={`Cantidad de ${line.name}: ${line.quantity}`} style={styles.quantity}>{line.quantity}</Text>
               <Pressable accessibilityRole="button" accessibilityLabel={`Aumentar cantidad de ${line.name}`} disabled={line.quantity >= 20}
-                accessibilityState={{ disabled: line.quantity >= 20 }} onPress={() => change(line.quantity + 1)} style={[styles.step, line.quantity >= 20 && styles.dimmed]}>
+                accessibilityState={{ disabled: line.quantity >= 20 }} onPress={() => changeTo(line.quantity + 1)} style={[styles.step, line.quantity >= 20 && styles.dimmed]}>
                 <Feather name="plus" size={16} color={colors.ink} accessible={false} />
               </Pressable>
             </View>
           </View>
-          <Pressable accessibilityRole="button" accessibilityLabel={`Eliminar ${line.name}`} onPress={() => change(0)} style={styles.trash}>
+          <Pressable accessibilityRole="button" accessibilityLabel={`Eliminar ${line.name}`} onPress={() => changeTo(0)} style={styles.trash}>
             <Feather name="trash-2" size={20} color={colors.muted} accessible={false} />
           </Pressable>
         </View>;

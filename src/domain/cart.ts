@@ -33,6 +33,41 @@ export function addProduct(cart: Cart, product: Product, quantity = 1, replaceRe
   return { cart: { restaurantId: product.restaurantId, lines }, requiresConfirmation: false };
 }
 
+// El servicio guarda solo producto y cantidad: nombre, precio y descuento se toman
+// siempre del menú vigente, nunca de lo que envía la app.
+export type StoredCart = { restaurantId: string | null; lines: { productId: string; quantity: number }[] };
+
+export const storedCart = (cart: Cart): StoredCart =>
+  ({ restaurantId: cart.restaurantId, lines: cart.lines.map(({ productId, quantity }) => ({ productId, quantity })) });
+
+// Los productos que ya no están en el menú no se muestran.
+export function resolveCart(stored: StoredCart, products: Product[]): Cart {
+  const lines = stored.lines.flatMap(({ productId, quantity }) => {
+    const product = products.find(item => item.id === productId && item.restaurantId === stored.restaurantId);
+    return product ? [{ productId, name: product.name, priceCOP: product.priceCOP, quantity, discountPercent: product.discountPercent }] : [];
+  });
+  return lines.length ? { restaurantId: stored.restaurantId, lines } : emptyCart;
+}
+
+const onlyKeys = (value: unknown, keys: string[]): value is Record<string, unknown> =>
+  !!value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).every(key => keys.includes(key));
+
+export function validateStoredCart(input: unknown): StoredCart {
+  if (!onlyKeys(input, ['restaurantId', 'lines']) || !Array.isArray(input.lines)) throw new Error('Revisa los datos del carrito.');
+  const { restaurantId, lines } = input;
+  if (lines.length ? typeof restaurantId !== 'string' || !restaurantId : restaurantId !== null) throw new Error('El carrito debe pertenecer a un solo restaurante.');
+  const valid: StoredCart['lines'] = [];
+  for (const line of lines) {
+    if (!onlyKeys(line, ['productId', 'quantity']) || typeof line.productId !== 'string' || !line.productId || valid.some(item => item.productId === line.productId)) {
+      throw new Error('Cada producto debe aparecer una sola vez, solo con su cantidad.');
+    }
+    if (line.quantity === 0) throw new Error(quantityError);
+    checkQuantity(line.quantity as number);
+    valid.push({ productId: line.productId, quantity: line.quantity as number });
+  }
+  return { restaurantId: restaurantId as string | null, lines: valid };
+}
+
 // Un solo redondeo por línea, al peso más cercano y con medio peso hacia arriba.
 export function lineAmounts({ priceCOP, quantity, discountPercent }: CartLine) {
   if (!Number.isInteger(priceCOP) || priceCOP < 1) throw new Error('El precio debe ser un entero positivo.');

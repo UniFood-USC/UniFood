@@ -1,4 +1,4 @@
-import { addProduct, cartTotals, emptyCart, formatCOP, lineAmounts, setQuantity, type Product } from '../../src/domain/cart';
+import { addProduct, cartTotals, emptyCart, formatCOP, lineAmounts, resolveCart, setQuantity, storedCart, validateStoredCart, type Product } from '../../src/domain/cart';
 
 const burger: Product = { id: 'doble', restaurantId: 'rest-burger', name: 'Doble', priceCOP: 20000, discountPercent: 0 };
 const fries: Product = { id: 'papas', restaurantId: 'rest-burger', name: 'Papas', priceCOP: 6000, discountPercent: 0 };
@@ -59,4 +59,38 @@ test.each([[0, 10], [100, 4], [1000, 95], [1000, 3]])('precio %p o descuento %p 
 test('los importes se muestran en pesos colombianos enteros', () => {
   expect(formatCOP(23250)).toBe('$23.250');
   expect(formatCOP(0)).toBe('$0');
+});
+
+test('el carrito guardado solo conserva restaurante, producto y cantidad', () => {
+  const cart = addProduct(addProduct(emptyCart, burger).cart, fries, 3).cart;
+  expect(storedCart(cart)).toEqual({ restaurantId: 'rest-burger', lines: [{ productId: 'doble', quantity: 1 }, { productId: 'papas', quantity: 3 }] });
+  expect(storedCart(emptyCart)).toEqual({ restaurantId: null, lines: [] });
+});
+
+test('al recuperarlo se completan nombre y precio desde los productos y se omiten los que ya no existen', () => {
+  const stored = { restaurantId: 'rest-burger', lines: [{ productId: 'papas', quantity: 2 }, { productId: 'retirado', quantity: 1 }] };
+  expect(resolveCart(stored, [burger, fries])).toEqual({ restaurantId: 'rest-burger', lines: [{ productId: 'papas', name: 'Papas', priceCOP: 6000, quantity: 2, discountPercent: 0 }] });
+  expect(resolveCart({ restaurantId: 'rest-burger', lines: [{ productId: 'retirado', quantity: 1 }] }, [burger])).toEqual(emptyCart);
+});
+
+test('un carrito válido para guardar pasa la validación sin cambios', () => {
+  const valid = { restaurantId: 'rest-burger', lines: [{ productId: 'doble', quantity: 20 }, { productId: 'papas', quantity: 1 }] };
+  expect(validateStoredCart(valid)).toEqual(valid);
+  expect(validateStoredCart({ restaurantId: null, lines: [] })).toEqual({ restaurantId: null, lines: [] });
+});
+
+test.each([
+  ['cantidad 21', { restaurantId: 'r', lines: [{ productId: 'p', quantity: 21 }] }],
+  ['cantidad fraccionaria', { restaurantId: 'r', lines: [{ productId: 'p', quantity: 1.5 }] }],
+  ['cantidad negativa', { restaurantId: 'r', lines: [{ productId: 'p', quantity: -1 }] }],
+  ['cantidad cero guardada', { restaurantId: 'r', lines: [{ productId: 'p', quantity: 0 }] }],
+  ['producto repetido', { restaurantId: 'r', lines: [{ productId: 'p', quantity: 1 }, { productId: 'p', quantity: 2 }] }],
+  ['precio enviado por la app', { restaurantId: 'r', lines: [{ productId: 'p', quantity: 1, priceCOP: 1 }] }],
+  ['campo ajeno', { restaurantId: 'r', lines: [], userId: 'otro' }],
+  ['líneas sin restaurante', { restaurantId: null, lines: [{ productId: 'p', quantity: 1 }] }],
+  ['restaurante sin líneas', { restaurantId: 'r', lines: [] }],
+  ['producto vacío', { restaurantId: 'r', lines: [{ productId: '', quantity: 1 }] }],
+  ['sin datos', null],
+])('se rechaza un carrito con %s', (_, input) => {
+  expect(() => validateStoredCart(input)).toThrow();
 });
