@@ -9,7 +9,7 @@ import { validateContact, validateRegistration } from '../../domain/registration
 import { roleLabels, stateLabels, type ManagedUser } from '../../domain/users';
 import type { ServiceResponse } from '../../domain/response';
 
-type Service = (action: 'users/list' | 'users/create' | 'users/update' | 'users/state', input: unknown) => Promise<ServiceResponse>;
+type Service = (action: 'users/list' | 'users/create' | 'users/update' | 'users/state' | 'users/delete', input: unknown) => Promise<ServiceResponse>;
 export default function UsersScreen({ service }: { service: Service }) {
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,7 +20,7 @@ export default function UsersScreen({ service }: { service: Service }) {
   const [password, setPassword] = useState(''), [confirmPassword, setConfirmPassword] = useState('');
   const [visible, setVisible] = useState(false);
   const [busy, setBusy] = useState(false), [message, setMessage] = useState('');
-  const [confirming, setConfirming] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState<{ id: string; action: 'state' | 'delete' } | null>(null);
   const sending = useRef(false);
   const mounted = useRef(true);
   const load = useCallback(() => service('users/list', {}).then(result => {
@@ -40,12 +40,13 @@ export default function UsersScreen({ service }: { service: Service }) {
     setForm(user); setMessage(''); setPassword(''); setConfirmPassword(''); setVisible(false);
     setName(user === 'new' ? '' : user.pendingContact?.name ?? user.name); setEmail(user === 'new' ? '' : user.pendingContact?.email ?? user.email); setRole('student');
   }
-  // Suspender bloquea el acceso de inmediato; se confirma antes de enviar.
-  async function changeState(user: ManagedUser) {
+  // Suspender y eliminar bloquean el acceso de inmediato; se confirman antes de enviar.
+  async function changeState(user: ManagedUser, action: 'state' | 'delete') {
     if (sending.current) return;
     sending.current = true; setBusy(true); setMessage('');
     try {
-      const result = await service('users/state', { id: user.id, state: user.state === 'active' ? 'suspended' : 'active' });
+      const result = action === 'delete' ? await service('users/delete', { id: user.id })
+        : await service('users/state', { id: user.id, state: user.state === 'active' ? 'suspended' : 'active' });
       if (!mounted.current) return;
       setMessage(result.mensaje);
       if (result.codigo === 'OK') await load();
@@ -106,13 +107,19 @@ export default function UsersScreen({ service }: { service: Service }) {
               <Text style={styles.subtitle}>{roleLabels[user.role]} · {stateLabels[user.state]}</Text>
               {!!user.pendingContact && <Text style={styles.body}>Edición pendiente de verificación</Text>}
               {user.state !== 'deleted' && <Pressable accessibilityRole="button" accessibilityLabel={`Editar ${user.name}`} onPress={() => open(user)} style={styles.edit}><Feather name="edit-2" size={18} color={colors.primary} /><Text style={styles.secondaryLabel}>Editar</Text></Pressable>}
-              {user.role !== 'restaurant' && user.state !== 'deleted' && (confirming === user.id ? <View style={styles.confirm}>
-                <Text style={styles.body}>{user.state === 'active' ? `¿Suspender a ${user.name}? Perderá el acceso de inmediato, incluso con la sesión abierta.` : `¿Reactivar a ${user.name}? Podrá volver a iniciar sesión.`}</Text>
-                <ActionButton busy={busy} label={user.state === 'active' ? 'Confirmar suspensión' : 'Confirmar reactivación'} onPress={() => { void changeState(user); }} />
+              {user.role !== 'restaurant' && user.state !== 'deleted' && (confirming?.id === user.id ? <View style={styles.confirm}>
+                <Text style={styles.body}>{confirming.action === 'delete' ? `¿Eliminar a ${user.name}? Perderá el acceso y su correo quedará libre para una cuenta nueva. No se puede deshacer.`
+                  : user.state === 'active' ? `¿Suspender a ${user.name}? Perderá el acceso de inmediato, incluso con la sesión abierta.` : `¿Reactivar a ${user.name}? Podrá volver a iniciar sesión.`}</Text>
+                <ActionButton busy={busy} label={confirming.action === 'delete' ? 'Confirmar eliminación' : user.state === 'active' ? 'Confirmar suspensión' : 'Confirmar reactivación'} onPress={() => { void changeState(user, confirming.action); }} />
                 <ActionButton busy={busy} label="Cancelar" secondary onPress={() => setConfirming(null)} />
-              </View> : <Pressable accessibilityRole="button" accessibilityLabel={`${user.state === 'active' ? 'Suspender' : 'Reactivar'} ${user.name}`} disabled={busy} onPress={() => setConfirming(user.id)} style={styles.edit}>
-                <Feather name={user.state === 'active' ? 'slash' : 'check-circle'} size={18} color={colors.primary} /><Text style={styles.secondaryLabel}>{user.state === 'active' ? 'Suspender' : 'Reactivar'}</Text>
-              </Pressable>)}
+              </View> : <>
+                <Pressable accessibilityRole="button" accessibilityLabel={`${user.state === 'active' ? 'Suspender' : 'Reactivar'} ${user.name}`} disabled={busy} onPress={() => setConfirming({ id: user.id, action: 'state' })} style={styles.edit}>
+                  <Feather name={user.state === 'active' ? 'slash' : 'check-circle'} size={18} color={colors.primary} /><Text style={styles.secondaryLabel}>{user.state === 'active' ? 'Suspender' : 'Reactivar'}</Text>
+                </Pressable>
+                <Pressable accessibilityRole="button" accessibilityLabel={`Eliminar ${user.name}`} disabled={busy} onPress={() => setConfirming({ id: user.id, action: 'delete' })} style={styles.edit}>
+                  <Feather name="trash-2" size={18} color={colors.primary} /><Text style={styles.secondaryLabel}>Eliminar</Text>
+                </Pressable>
+              </>)}
             </View>)}
           </>}
         </>}

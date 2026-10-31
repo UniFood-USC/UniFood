@@ -124,3 +124,45 @@ export async function changeUserState(authorization: string | undefined, input: 
   }
   return result;
 }
+
+// Eliminación lógica de estudiantes y administradores: el perfil queda como «deleted»
+// para conservar su historial, se libera el correo y se borra la identidad de Auth,
+// así que registrarse otra vez con ese correo crea una cuenta nueva sin acceso a la anterior.
+// La cancelación de pedidos activos y los restaurantes llegarán con sus módulos.
+export async function deleteAccount(authorization: string | undefined, input: unknown) {
+  const actor = await checkedIdentity(authorization, {});
+  if (actor.role !== 'admin') return response('NO_AUTORIZADO', 'Solo un administrador puede gestionar cuentas.');
+  const data = (input ?? {}) as Record<string, unknown>;
+  if (typeof data.id !== 'string' || !data.id || data.id.includes('/') || Object.keys(data).length !== 1) return response('VALIDACION', 'Indica la cuenta que se elimina.');
+  const id = data.id;
+  if (id === actor.id) return response('VALIDACION', 'No puedes eliminar tu propia cuenta.');
+  const { auth, db } = adminServices();
+  const result = await db.runTransaction(async tx => {
+    const ref = db.doc(`users/${id}`);
+    const target = (await tx.get(ref)).data();
+    const currentActor = (await tx.get(db.doc(`users/${actor.id}`))).data();
+    const control = await readAdminControl(tx, db);
+    if (currentActor?.role !== 'admin' || currentActor.state !== 'active') return response('NO_AUTORIZADO', 'La cuenta no puede gestionar usuarios.');
+    if (!target || target.provisioning) return response('VALIDACION', 'La cuenta no está disponible.');
+    if (!['student', 'admin'].includes(target.role)) return response('VALIDACION', 'La eliminación de restaurantes estará disponible con su gestión.');
+    if (target.state !== 'deleted') {
+      const leavesAdmins = target.role === 'admin' && target.state === 'active';
+      if (leavesAdmins && control.activeCount <= 2) return response('MINIMO_ADMINISTRADORES', 'Deben permanecer al menos dos administradores activos.');
+      const reservation = db.doc(`emailReservations/${emailKey(target.email)}`);
+      if ((await tx.get(reservation)).data()?.userId === id) tx.delete(reservation);
+      tx.update(ref, { state: 'deleted', deletedAt: new Date().toISOString(), version: Number(target.version ?? 1) + 1 });
+      if (leavesAdmins) tx.set(control.ref, { activeCount: control.activeCount - 1, version: control.version + 1 });
+    }
+    return response('OK', 'Cuenta eliminada.');
+  });
+  if (result.codigo !== 'OK') return result;
+  // El perfil ya bloquea cada operación; borrar la identidad corta la sesión y libera
+  // el correo en Auth. Repetir la acción completa este paso si se interrumpió.
+  try { await auth.deleteUser(id); }
+  catch (error) {
+    if ((error as { code?: string }).code !== 'auth/user-not-found') {
+      return response('EN_PROCESO', 'La cuenta se eliminó, pero falta cerrar su acceso. Repite la acción para completarla.', null, true);
+    }
+  }
+  return result;
+}
