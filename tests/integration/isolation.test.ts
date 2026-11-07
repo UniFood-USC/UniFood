@@ -6,7 +6,7 @@ import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, where } fro
 import { adminServices } from '../../functions/src/firebase';
 import { seedDemo } from '../../scripts/seed';
 
-// Matriz de acceso directo a los datos privados de carrito, pagos y avisos: desde la app nadie
+// Matriz de acceso directo a los datos privados de carrito, pagos, pedidos y avisos: desde la app nadie
 // los lee, lista ni escribe, ni siquiera su dueño; todo pasa por el servicio, que toma la cuenta
 // de la sesión (sus pruebas cubren que cada cuenta solo recibe lo propio).
 const privateDocs = {
@@ -15,6 +15,7 @@ const privateDocs = {
   devices: 'devices/aislamiento',
   purchaseAttempts: 'purchaseAttempts/aislamiento',
   paymentMovements: 'paymentMovements/pay_aislamiento',
+  orders: 'orders/aislamiento',
 };
 const owned = { userId: 'demo-student', recipientId: 'demo-student' };
 let rules: RulesTestEnvironment;
