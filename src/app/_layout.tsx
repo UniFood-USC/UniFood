@@ -24,6 +24,8 @@ function Navigator() {
       <Stack.Screen name="student" options={{ title: 'Estudiante', headerRight }} />
       <Stack.Screen name="order/[id]" />
       <Stack.Screen name="restaurants" />
+      <Stack.Screen name="menu/[restaurantId]" options={{ headerShown: false }} />
+      <Stack.Screen name="product/[productId]" options={{ headerShown: false }} />
     </Stack.Protected>
     <Stack.Protected guard={identity?.role === 'restaurant'}>
       <Stack.Screen name="restaurant" options={{ title: 'Restaurante', headerRight }} />
