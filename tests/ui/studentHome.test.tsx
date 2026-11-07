@@ -28,13 +28,14 @@ test('el inicio saluda por el nombre y muestra hasta tres restaurantes', async (
   expect(callService).toHaveBeenCalledWith('profile', { id: 'demo-student' });
 });
 
-test('desde el inicio se llega al listado completo, a buscar y al perfil', async () => {
+test('desde el inicio se llega al listado completo, a buscar, al perfil y a los avisos', async () => {
   serve();
   await render(<StudentScreen />);
   await fireEvent.press(screen.getByRole('button', { name: 'Ver todos los restaurantes' }));
   await fireEvent.press(screen.getByRole('button', { name: 'Buscar restaurantes o platos' }));
   await fireEvent.press(screen.getByRole('button', { name: 'Perfil' }));
-  expect(mockPush.mock.calls.map(([href]) => href)).toEqual(['/restaurants', '/student/search', '/student/profile']);
+  await fireEvent.press(screen.getByRole('button', { name: 'Avisos' }));
+  expect(mockPush.mock.calls.map(([href]) => href)).toEqual(['/restaurants', '/student/search', '/student/profile', '/notifications']);
 });
 
 test('el inicio informa si no hay restaurantes', async () => {

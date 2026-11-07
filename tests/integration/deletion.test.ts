@@ -62,5 +62,9 @@ test('RF-21: eliminar administradores a la vez nunca deja menos de dos activos',
   assert.equal(results.filter(r => r.codigo === 'MINIMO_ADMINISTRADORES').length, 1);
   assert.equal((await db.collection('users').where('role', '==', 'admin').where('state', '==', 'active').get()).size, 2);
   assert.equal((await db.doc('administrativeControl/admins').get()).data()?.activeCount, 2);
+  // Restaurar la demo puede reactivar a demo-admin-2 junto a quien sobrevivió: dejar solo los dos de demo.
   await seedDemo();
+  const leftovers = (await db.collection('users').where('role', '==', 'admin').where('state', '==', 'active').get()).docs
+    .map(doc => doc.id).filter(id => !['demo-admin-1', 'demo-admin-2'].includes(id));
+  for (const id of leftovers) assert.equal((await post('users/delete', { id }, admin)).codigo, 'OK');
 });
