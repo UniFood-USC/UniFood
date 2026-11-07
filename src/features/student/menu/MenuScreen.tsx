@@ -34,7 +34,8 @@ export default function MenuScreen({ restaurantId, service }: { restaurantId: st
     }).finally(() => { if (mine === latest.current) { setLoading(false); setRefreshing(false); } });
   }, [service, restaurantId]);
 
-  useEffect(() => { setMenu(null); setLoading(true); void load(); return () => { latest.current += 1; }; }, [load]);
+  // La ruta monta esta pantalla con key=restaurantId: otro restaurante = estado nuevo (cargando).
+  useEffect(() => { void load(); return () => { latest.current += 1; }; }, [load]);
 
   const retry = () => { setLoading(true); setError(''); void load(); };
   const refresh = () => { setRefreshing(true); void load(); };

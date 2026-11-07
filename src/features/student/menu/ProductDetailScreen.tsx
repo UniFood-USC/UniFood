@@ -34,7 +34,8 @@ export default function ProductDetailScreen({ restaurantId, productId, service }
     }).finally(() => { if (mine === latest.current) setLoading(false); });
   }, [service, restaurantId, productId]);
 
-  useEffect(() => { setDetail(null); setLoading(true); setPhoto(0); void load(); return () => { latest.current += 1; }; }, [load]);
+  // La ruta monta esta pantalla con key=restaurante/producto: otro producto = estado nuevo (cargando).
+  useEffect(() => { void load(); return () => { latest.current += 1; }; }, [load]);
 
   const goBack = () => (router.canGoBack() ? router.back() : router.replace(menuRoutes.restaurantMenu(restaurantId)));
   const pageWidth = Math.min(width, 760) - 48;
