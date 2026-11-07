@@ -1,4 +1,4 @@
-import { newestFirst, noticeFor, noticeId, validateNoticeEvent } from '../../src/domain/notifications';
+import { newestFirst, noticeFor, noticeId, validateDevice, validateNoticeEvent } from '../../src/domain/notifications';
 
 const event = { id: 'evt-1', kind: 'order_ready', orderId: 'ped-1', orderNumber: 'UC1023', recipients: ['demo-student'], occurredAt: '2026-11-07T15:00:00.000Z' };
 
@@ -35,4 +35,21 @@ test('cada destinatario recibe un aviso con identificador estable y texto según
 test('los avisos se ordenan del más reciente al más antiguo', () => {
   const list = [{ createdAt: '2026-11-07T10:00:00Z' }, { createdAt: '2026-11-07T12:00:00Z' }, { createdAt: '2026-11-06T23:00:00Z' }];
   expect([...list].sort(newestFirst).map(n => n.createdAt)).toEqual(['2026-11-07T12:00:00Z', '2026-11-07T10:00:00Z', '2026-11-06T23:00:00Z']);
+});
+
+test('un dispositivo se registra solo con su token y plataforma', () => {
+  const device = { token: 'ExponentPushToken[abc123]', platform: 'android' };
+  expect(validateDevice(device)).toEqual(device);
+  expect(validateDevice({ token: 'ExponentPushToken[xyz]', platform: 'ios' }).platform).toBe('ios');
+});
+
+test.each([
+  ['sin token', { platform: 'ios' }],
+  ['token vacío', { token: '', platform: 'ios' }],
+  ['token demasiado largo', { token: 'x'.repeat(301), platform: 'ios' }],
+  ['plataforma desconocida', { token: 't', platform: 'web' }],
+  ['cuenta enviada por la app', { token: 't', platform: 'ios', userId: 'otro' }],
+  ['sin datos', null],
+])('se rechaza registrar un dispositivo con %s', (_, input) => {
+  expect(() => validateDevice(input)).toThrow();
 });

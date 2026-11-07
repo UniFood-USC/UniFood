@@ -47,3 +47,41 @@ test('RF-12/RF-17: sin sesión o como administrador no se consultan avisos', asy
   assert.equal((await post('notifications/list', {})).codigo, 'SESION_REQUERIDA');
   assert.equal((await post('notifications/list', {}, await login('admin1@usc.edu.co'))).codigo, 'NO_AUTORIZADO');
 });
+
+test('RF-12/RF-17: un dispositivo queda vinculado a una sola cuenta y salir lo desvincula sin borrar la bandeja', async () => {
+  const db = adminServices().db;
+  const token = `ExponentPushToken[${Date.now()}]`;
+  const devicesOf = async () => (await db.collection('devices').where('token', '==', token).get()).docs.map(doc => doc.data());
+  const student = await login('student@usc.edu.co');
+  assert.equal((await post('devices/register', { token, platform: 'android' }, student)).codigo, 'OK');
+  assert.equal((await post('devices/register', { token, platform: 'android' }, student)).codigo, 'OK', 'repetir no duplica');
+  let stored = await devicesOf();
+  assert.equal(stored.length, 1);
+  assert.equal(stored[0].userId, 'demo-student');
+  assert.equal(stored[0].sessionVersion, 1);
+
+  const restaurant = await login('restaurant@example.test');
+  assert.equal((await post('devices/unregister', { token }, restaurant)).codigo, 'OK');
+  assert.equal((await devicesOf()).length, 1, 'otra cuenta no desvincula un dispositivo ajeno');
+  assert.equal((await post('devices/register', { token, platform: 'android' }, restaurant)).codigo, 'OK');
+  stored = await devicesOf();
+  assert.equal(stored.length, 1, 'el mismo dispositivo pasa a la cuenta que inició sesión');
+  assert.equal(stored[0].userId, 'demo-restaurant');
+
+  const eventId = `salida-${Date.now()}`;
+  await materializeNotices(event(eventId, 'new_order', ['demo-restaurant'], '2026-11-07T16:00:00.000Z'));
+  assert.equal((await post('devices/unregister', { token }, restaurant)).codigo, 'OK');
+  assert.equal((await devicesOf()).length, 0);
+  const inbox = await post('notifications/list', {}, await login('restaurant@example.test'));
+  assert.ok(inbox.datos.notices.some((n: { eventId: string }) => n.eventId === eventId), 'la bandeja se conserva');
+});
+
+test('RF-12/RF-17: registrar dispositivos exige sesión de estudiante o restaurante y datos válidos', async () => {
+  const device = { token: 'ExponentPushToken[valido]', platform: 'ios' };
+  assert.equal((await post('devices/register', device)).codigo, 'SESION_REQUERIDA');
+  assert.equal((await post('devices/register', device, await login('admin1@usc.edu.co'))).codigo, 'NO_AUTORIZADO');
+  const student = await login('student@usc.edu.co');
+  assert.equal((await post('devices/register', { ...device, platform: 'web' }, student)).codigo, 'VALIDACION');
+  assert.equal((await post('devices/register', { ...device, userId: 'demo-restaurant' }, student)).codigo, 'VALIDACION');
+  assert.equal((await post('devices/unregister', {}, student)).codigo, 'VALIDACION');
+});

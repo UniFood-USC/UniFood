@@ -53,3 +53,15 @@ test('el perfil muestra los datos propios y cierra sesión', async () => {
   await fireEvent.press(screen.getByRole('button', { name: 'Cerrar sesión' }));
   expect(mockLogout).toHaveBeenCalledTimes(1);
 });
+
+test('desde el perfil se abren los avisos; el administrador no tiene bandeja', async () => {
+  serve();
+  const { unmount } = await render(<ProfileScreen />);
+  await fireEvent.press(await screen.findByRole('button', { name: 'Notificaciones' }));
+  expect(mockPush).toHaveBeenLastCalledWith('/notifications');
+  await unmount();
+  jest.mocked(callService).mockResolvedValue(response('OK', 'Perfil consultado.', { ...profile, role: 'admin' }));
+  await render(<ProfileScreen />);
+  expect(await screen.findByText('Administrador')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Notificaciones' })).toBeNull();
+});

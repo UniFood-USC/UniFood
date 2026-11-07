@@ -38,3 +38,14 @@ export function noticeFor(event: NoticeEvent, recipientId: string): Notice & { r
 }
 
 export const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => Date.parse(b.createdAt) - Date.parse(a.createdAt);
+
+// Dispositivo para push: la cuenta y la sesión salen siempre de la identidad comprobada.
+export type Device = { token: string; platform: 'ios' | 'android' };
+
+export function validateDevice(input: unknown, keys = ['token', 'platform']): Device {
+  if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).some(key => !keys.includes(key))) throw new Error('Revisa los datos del dispositivo.');
+  const { token, platform } = input as Record<string, unknown>;
+  if (typeof token !== 'string' || !token.trim() || token.length > 300) throw new Error('El dispositivo no tiene un token válido.');
+  if (keys.includes('platform') && platform !== 'ios' && platform !== 'android') throw new Error('La plataforma debe ser iOS o Android.');
+  return { token, platform: platform as Device['platform'] };
+}
