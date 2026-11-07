@@ -4,8 +4,10 @@ import { localFirebase } from '../../services/firebase';
 import { login, type LoginIdentity } from '../../services/login';
 import { registerStudent } from '../../services/registration';
 import { callService } from '../../services/client';
+import { currentPushDevice } from '../../services/pushDevice';
 import { response, type ServiceResponse } from '../../domain/response';
 import type { RegistrationInput } from '../../domain/registration';
+import type { Device } from '../../domain/notifications';
 
 type Session = {
   identity: LoginIdentity | null;
@@ -20,6 +22,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
   const [identity, setIdentity] = useState<LoginIdentity | null>(null);
   const [message, setMessage] = useState('');
   const generation = useRef(0);
+  const device = useRef<Device | null>(null);
   useEffect(() => {
     const invalidatePending = () => { generation.current++; };
     const { auth } = localFirebase();
@@ -30,10 +33,24 @@ export function SessionProvider({ children }: PropsWithChildren) {
     return () => { invalidatePending(); unsubscribe(); };
   }, []);
 
+  // Avisos push solo para estudiante y restaurante. Vincular es opcional: sin permiso o sin
+  // conexión la sesión sigue igual y los avisos quedan en la bandeja.
+  async function linkDevice(checked: LoginIdentity, current: number) {
+    if (checked.role === 'admin') return;
+    const found = await currentPushDevice();
+    if (!found || current !== generation.current) return;
+    try { if ((await callService('devices/register', found)).codigo === 'OK' && current === generation.current) device.current = found; }
+    catch { /* se reintentará al volver a iniciar sesión */ }
+  }
+
   async function logout() {
     generation.current++;
     setIdentity(null);
     setMessage('');
+    // Desvincular necesita la sesión todavía abierta, así que va antes de cerrar Auth; la bandeja sigue en la cuenta.
+    const linked = device.current;
+    device.current = null;
+    if (linked) await callService('devices/unregister', { token: linked.token }).catch(() => undefined);
     try { await signOut(localFirebase().auth); }
     catch { setMessage('La vista se cerró. No pudimos completar la salida; vuelve a intentarlo antes de acceder.'); }
   }
@@ -47,7 +64,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
       await signOut(localFirebase().auth);
       return response<LoginIdentity>('SESION_REQUERIDA', 'Inicia sesión de nuevo.');
     }
-    if (result.codigo === 'OK' && result.datos) setIdentity(result.datos);
+    if (result.codigo === 'OK' && result.datos) { setIdentity(result.datos); void linkDevice(result.datos, current); }
     return result;
   }
 
@@ -62,6 +79,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
       const checked = await callService<LoginIdentity>('identity', {});
       if (current !== generation.current || checked.codigo !== 'OK' || !checked.datos) throw new Error('Sesión no confirmada');
       setIdentity(checked.datos);
+      void linkDevice(checked.datos, current);
       return result;
     } catch {
       await signOut(localFirebase().auth);

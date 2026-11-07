@@ -28,13 +28,14 @@ test('el inicio saluda por el nombre y muestra hasta tres restaurantes', async (
   expect(callService).toHaveBeenCalledWith('profile', { id: 'demo-student' });
 });
 
-test('desde el inicio se llega al listado completo, a buscar y al perfil', async () => {
+test('desde el inicio se llega al listado completo, a buscar, al perfil y a los avisos', async () => {
   serve();
   await render(<StudentScreen />);
   await fireEvent.press(screen.getByRole('button', { name: 'Ver todos los restaurantes' }));
   await fireEvent.press(screen.getByRole('button', { name: 'Buscar restaurantes o platos' }));
   await fireEvent.press(screen.getByRole('button', { name: 'Perfil' }));
-  expect(mockPush.mock.calls.map(([href]) => href)).toEqual(['/restaurants', '/student/search', '/student/profile']);
+  await fireEvent.press(screen.getByRole('button', { name: 'Avisos' }));
+  expect(mockPush.mock.calls.map(([href]) => href)).toEqual(['/restaurants', '/student/search', '/student/profile', '/notifications']);
 });
 
 test('el inicio informa si no hay restaurantes', async () => {
@@ -51,4 +52,16 @@ test('el perfil muestra los datos propios y cierra sesión', async () => {
   expect(screen.getByText('Estudiante')).toBeTruthy();
   await fireEvent.press(screen.getByRole('button', { name: 'Cerrar sesión' }));
   expect(mockLogout).toHaveBeenCalledTimes(1);
+});
+
+test('desde el perfil se abren los avisos; el administrador no tiene bandeja', async () => {
+  serve();
+  const { unmount } = await render(<ProfileScreen />);
+  await fireEvent.press(await screen.findByRole('button', { name: 'Notificaciones' }));
+  expect(mockPush).toHaveBeenLastCalledWith('/notifications');
+  await unmount();
+  jest.mocked(callService).mockResolvedValue(response('OK', 'Perfil consultado.', { ...profile, role: 'admin' }));
+  await render(<ProfileScreen />);
+  expect(await screen.findByText('Administrador')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Notificaciones' })).toBeNull();
 });

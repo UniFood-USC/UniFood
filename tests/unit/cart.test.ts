@@ -1,4 +1,4 @@
-import { addProduct, cartTotals, emptyCart, formatCOP, lineAmounts, resolveCart, setQuantity, storedCart, validateCartSave, validateStoredCart, type Product } from '../../src/domain/cart';
+import { addProduct, addToStoredCart, cartTotals, emptyCart, fromMenuProduct, formatCOP, lineAmounts, resolveCart, setQuantity, storedCart, validateCartSave, validateStoredCart, type Product } from '../../src/domain/cart';
 
 const burger: Product = { id: 'doble', restaurantId: 'rest-burger', name: 'Doble', priceCOP: 20000, discountPercent: 0 };
 const fries: Product = { id: 'papas', restaurantId: 'rest-burger', name: 'Papas', priceCOP: 6000, discountPercent: 0 };
@@ -103,4 +103,24 @@ test('guardar exige la versión del carrito que tiene el dispositivo', () => {
 
 test.each([undefined, -1, 1.5, '2', null])('se rechaza guardar con la versión %p', version => {
   expect(() => validateCartSave({ restaurantId: 'r', lines: [{ productId: 'p', quantity: 1 }], version })).toThrow('Actualiza el carrito antes de guardar.');
+});
+
+test('un producto del menú se agrega con su precio base y el porcentaje de su promoción vigente', () => {
+  expect(fromMenuProduct('rest-burger', { id: 'doble', nombre: 'Doble', precioCOP: 20000, disponible: true, promocion: { porcentaje: 15, precioFinalCOP: 17000 } }))
+    .toEqual({ id: 'doble', restaurantId: 'rest-burger', name: 'Doble', priceCOP: 20000, discountPercent: 15 });
+  expect(fromMenuProduct('rest-burger', { id: 'papas', nombre: 'Papas', precioCOP: 6000, disponible: true }).discountPercent).toBe(0);
+});
+
+test('un producto agotado no se puede agregar', () => {
+  expect(() => fromMenuProduct('rest-burger', { id: 'papas', nombre: 'Papas', precioCOP: 6000, disponible: false })).toThrow('Este producto está agotado.');
+});
+
+test('agregar sobre el carrito guardado suma cantidades y pide confirmación si es de otro restaurante', () => {
+  const stored = { restaurantId: 'rest-burger', lines: [{ productId: 'papas', quantity: 1 }] };
+  expect(addToStoredCart(stored, burger)).toEqual({ cart: { restaurantId: 'rest-burger', lines: [{ productId: 'papas', quantity: 1 }, { productId: 'doble', quantity: 1 }] }, requiresConfirmation: false });
+  expect(addToStoredCart(stored, fries).cart.lines).toEqual([{ productId: 'papas', quantity: 2 }]);
+  expect(addToStoredCart({ restaurantId: null, lines: [] }, pizza).cart).toEqual({ restaurantId: 'rest-pizza', lines: [{ productId: 'pizza', quantity: 1 }] });
+  expect(addToStoredCart(stored, pizza)).toEqual({ cart: stored, requiresConfirmation: true });
+  expect(addToStoredCart(stored, pizza, 1, true).cart).toEqual({ restaurantId: 'rest-pizza', lines: [{ productId: 'pizza', quantity: 1 }] });
+  expect(() => addToStoredCart({ restaurantId: 'rest-burger', lines: [{ productId: 'papas', quantity: 20 }] }, fries)).toThrow('La cantidad debe ser un número entero de 1 a 20');
 });

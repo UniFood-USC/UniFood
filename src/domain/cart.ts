@@ -22,15 +22,31 @@ export function setQuantity(cart: Cart, productId: string, quantity: number): Ca
 }
 
 // Un carrito es de un solo restaurante: cambiarlo exige la confirmación del estudiante.
-export function addProduct(cart: Cart, product: Product, quantity = 1, replaceRestaurant = false) {
+// Sirve igual para el carrito en pantalla y para el guardado; solo cambia cómo se arma la línea.
+function addLine<L extends { productId: string; quantity: number }>(cart: { restaurantId: string | null; lines: L[] }, product: Product, quantity: number, replaceRestaurant: boolean, toLine: (quantity: number) => L) {
   if (cart.restaurantId && cart.restaurantId !== product.restaurantId && !replaceRestaurant) return { cart, requiresConfirmation: true };
-  const base = cart.restaurantId === product.restaurantId ? cart : { restaurantId: product.restaurantId, lines: [] };
-  const current = base.lines.find(line => line.productId === product.id)?.quantity ?? 0;
+  const base = cart.restaurantId === product.restaurantId ? cart.lines : [];
+  const current = base.find(line => line.productId === product.id)?.quantity ?? 0;
   if (quantity < 1) throw new Error(quantityError);
   checkQuantity(current + quantity);
-  const line = { productId: product.id, name: product.name, priceCOP: product.priceCOP, quantity: current + quantity, discountPercent: product.discountPercent };
-  const lines = current ? base.lines.map(item => item.productId === product.id ? line : item) : [...base.lines, line];
+  const line = toLine(current + quantity);
+  const lines = current ? base.map(item => item.productId === product.id ? line : item) : [...base, line];
   return { cart: { restaurantId: product.restaurantId, lines }, requiresConfirmation: false };
+}
+
+export const addProduct = (cart: Cart, product: Product, quantity = 1, replaceRestaurant = false) =>
+  addLine(cart, product, quantity, replaceRestaurant, total => ({ productId: product.id, name: product.name, priceCOP: product.priceCOP, quantity: total, discountPercent: product.discountPercent }));
+
+export const addToStoredCart = (cart: StoredCart, product: Product, quantity = 1, replaceRestaurant = false) =>
+  addLine(cart, product, quantity, replaceRestaurant, total => ({ productId: product.id, quantity: total }));
+
+// Producto tal como lo entrega la consulta del menú (RF-06). El carrito usa el precio
+// base y el porcentaje vigente; el descuento se aplica una sola vez por línea al calcular.
+export type MenuProduct = { id: string; nombre: string; precioCOP: number; disponible: boolean; promocion?: { porcentaje: number; precioFinalCOP: number } };
+
+export function fromMenuProduct(restaurantId: string, product: MenuProduct): Product {
+  if (!product.disponible) throw new Error('Este producto está agotado.');
+  return { id: product.id, restaurantId, name: product.nombre, priceCOP: product.precioCOP, discountPercent: product.promocion?.porcentaje ?? 0 };
 }
 
 // El servicio guarda solo producto y cantidad: nombre, precio y descuento se toman
