@@ -26,7 +26,14 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-notifications",
+        {
+          "color": "#C8440A",
+          "defaultChannel": "avisos"
+        }
+      ]
     ]
   }
 }
