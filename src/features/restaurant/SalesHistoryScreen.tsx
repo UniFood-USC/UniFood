@@ -2,7 +2,8 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { useRouter } from 'expo-router';
 import { colors } from '../../constants/theme';
 import { getRestaurantSalesHistory, type SalesEntry } from '../../domain/sales';
-import { MOCK_ACTORS, mockOrders, restaurantName } from '../../services/orders/orderRepository';
+import { restaurantName } from '../../services/orders/orderRepository';
+import { serverOrderRepository } from '../../services/orders/serverOrderRepository';
 import { statusLabel } from '../../services/orders/statusFlow';
 import { useOrders } from '../../services/orders/useOrders';
 import type { OrderRepository } from '../../services/orders/orderRepository';
@@ -27,13 +28,16 @@ function formatDate(iso: string) {
 }
 
 export default function SalesHistoryScreen({
-  repository = mockOrders.repo,
-  restaurantId = MOCK_ACTORS.restaurant.restaurantId,
+  repository = serverOrderRepository,
+  restaurantId = '',
 }: Props) {
   const router = useRouter();
   const { orders, error, loading } = useOrders(repository, { restaurantId });
-  const history = getRestaurantSalesHistory(orders, restaurantId);
-  const total = history.sales.reduce((sum, entry) => sum + entry.order.total, 0);
+  const history = restaurantId ? getRestaurantSalesHistory(orders, restaurantId) : null;
+  const sales = history?.sales ?? [];
+  const cancelled = history?.cancelled ?? [];
+  const refunds = history?.refunds ?? [];
+  const total = sales.reduce((sum, entry) => sum + entry.order.total, 0);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -45,10 +49,15 @@ export default function SalesHistoryScreen({
         <View style={styles.back} />
       </View>
       <Text style={styles.restaurantName}>{restaurantName(restaurantId)}</Text>
-      <Text style={styles.demoNote}>Datos de demostración; la cuenta aún no está vinculada a un restaurante persistido.</Text>
 
       {loading ? (
         <ActivityIndicator color={colors.primary} accessibilityLabel="Cargando historial de ventas" />
+      ) : !restaurantId ? (
+        <View style={styles.empty}>
+          <Text accessibilityRole="alert" style={styles.emptyText}>
+            Esta cuenta no está vinculada a un restaurante.
+          </Text>
+        </View>
       ) : error ? (
         <View style={styles.empty}>
           <Text accessibilityRole="alert" style={styles.emptyText}>
@@ -60,7 +69,7 @@ export default function SalesHistoryScreen({
           <View style={styles.summary}>
             <Text style={styles.summaryLabel}>Ventas completadas</Text>
             <Text style={styles.summaryAmount}>{money(total)}</Text>
-            <Text style={styles.muted}>{history.sales.length} pedidos</Text>
+            <Text style={styles.muted}>{sales.length} pedidos</Text>
           </View>
           <Text style={styles.note}>
             Incluye pedidos pagados recogidos o entregados, también los de importe cero. Los importes reflejan descuentos e incluyen la tarifa de entrega.
@@ -68,21 +77,21 @@ export default function SalesHistoryScreen({
           <HistorySection
             title="Ventas completadas"
             emptyText="Aún no hay ventas completadas."
-            entries={history.sales}
+            entries={sales}
             amount={entry => entry.order.total}
             status={entry => statusLabel(entry.order.status, entry.order.mode)}
           />
           <HistorySection
             title="Pedidos cancelados"
             emptyText="No hay pedidos cancelados."
-            entries={history.cancelled}
+            entries={cancelled}
             amount={entry => entry.order.total}
             status={() => 'Cancelado'}
           />
           <HistorySection
             title="Reembolsos"
             emptyText="No hay reembolsos."
-            entries={history.refunds}
+            entries={refunds}
             amount={entry => entry.order.refund.amount}
             status={() => 'Reembolsado'}
           />
@@ -132,7 +141,6 @@ const styles = StyleSheet.create({
   backText: { fontSize: 32, color: colors.ink, lineHeight: 36 },
   title: { flex: 1, textAlign: 'center', fontSize: 24, fontWeight: '700', color: colors.ink },
   restaurantName: { fontSize: 17, color: colors.muted, textAlign: 'center' },
-  demoNote: { color: colors.muted, fontSize: 13, lineHeight: 19, textAlign: 'center' },
   summary: { padding: 18, borderRadius: 16, backgroundColor: colors.accent, gap: 4 },
   summaryLabel: { color: colors.ink, fontSize: 15, fontWeight: '600' },
   summaryAmount: { color: colors.ink, fontSize: 28, fontWeight: '700' },

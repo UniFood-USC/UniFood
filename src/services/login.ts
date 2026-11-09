@@ -5,7 +5,7 @@ import type { UserRole } from '../types/domain';
 import { localFirebase } from './firebase';
 import { callService } from './client';
 
-export type LoginIdentity = { id: string; role: UserRole; state: 'active' };
+export type LoginIdentity = { id: string; role: UserRole; state: 'active'; restaurantId?: string };
 type Dependencies = {
   firebase: () => { auth: Auth; ready: Promise<void> };
   checkIdentity: () => Promise<ServiceResponse<LoginIdentity>>;
@@ -45,7 +45,12 @@ export async function login(input: unknown, dependencies: Dependencies = {
       || !['student', 'restaurant', 'admin'].includes(identity.role)) {
       throw new Error('Identidad no válida');
     }
-    return response('OK', 'Sesión iniciada.', { id: identity.id, role: identity.role, state: 'active' });
+    return response('OK', 'Sesión iniciada.', {
+      id: identity.id,
+      role: identity.role,
+      state: 'active',
+      ...(identity.restaurantId ? { restaurantId: identity.restaurantId } : {}),
+    });
   } catch (error) {
     if (auth) await signOut(auth);
     const code = (error as { code?: string })?.code;

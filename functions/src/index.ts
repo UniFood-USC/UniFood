@@ -5,8 +5,7 @@ import { response, type ResultCode } from '../../src/domain/response';
 import { changeUserState, deleteAccount, listUsers, updateUserContact } from './users';
 import { completeRecovery, requestRecovery } from './recovery';
 import { listRestaurants } from './restaurants';
-import { readCart, saveCart } from './cart';
-import { listNotices, registerDevice, unregisterDevice } from './notifications';
+import { changeOrder, getOrder, listOrders } from './orders';
 
 initializeApp();
 export const api = onRequest({ cors: true, maxInstances: 2 }, async (request, reply) => {
@@ -14,6 +13,12 @@ export const api = onRequest({ cors: true, maxInstances: 2 }, async (request, re
   if (request.path === '/register') { reply.json(await registerStudent(request.body)); return; }
   if (request.path === '/recovery/request') { reply.json(await requestRecovery(request.body)); return; }
   if (request.path === '/recovery/complete') { reply.json(await completeRecovery(request.body)); return; }
+  if (['/identity', '/profile', '/users/create', '/users/list', '/users/update', '/users/state', '/restaurants/list', '/orders/list', '/orders/get', '/orders/change'].includes(request.path)) {
+    try {
+      const result = request.path === '/restaurants/list' ? await listRestaurants(request.headers.authorization)
+        : request.path === '/orders/list' ? await listOrders(request.headers.authorization, request.body)
+        : request.path === '/orders/get' ? await getOrder(request.headers.authorization, request.body)
+        : request.path === '/orders/change' ? await changeOrder(request.headers.authorization, request.body)
   if (['/identity', '/profile', '/users/create', '/users/list', '/users/update', '/users/state', '/users/delete', '/restaurants/list', '/cart/get', '/cart/save', '/notifications/list', '/devices/register', '/devices/unregister'].includes(request.path)) {
     try {
       const result = request.path === '/restaurants/list' ? await listRestaurants(request.headers.authorization)

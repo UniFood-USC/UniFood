@@ -15,7 +15,7 @@ export async function seedDemo() {
     { id: 'demo-admin-1', email: 'admin1@usc.edu.co', name: 'Administrador Demo Uno', role: 'admin' },
     { id: 'demo-admin-2', email: 'admin2@example.test', name: 'Administrador Demo Dos', role: 'admin' },
     { id: 'demo-student', email: 'student@usc.edu.co', name: 'Estudiante Demo', role: 'student' },
-    { id: 'demo-restaurant', email: 'restaurant@example.test', name: 'Restaurante Demo', role: 'restaurant' },
+    { id: 'demo-restaurant', email: 'restaurant@example.test', name: 'Restaurante Demo', role: 'restaurant', restaurantId: 'rest-burger' },
   ];
   for (const user of users) {
     try { await getAuth().createUser({ uid: user.id, email: user.email, password: 'Demo1234', displayName: user.name }); }
