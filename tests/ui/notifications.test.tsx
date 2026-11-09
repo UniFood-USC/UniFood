@@ -3,9 +3,10 @@ import NotificationsScreen from '../../src/features/notifications/NotificationsS
 import { response } from '../../src/domain/response';
 
 const mockFocus: { run?: () => void } = {};
+const mockPush = jest.fn();
 jest.mock('expo-router', () => {
   const { useEffect } = jest.requireActual('react');
-  return { useFocusEffect: (effect: () => void) => { mockFocus.run = effect; useEffect(effect, [effect]); } };
+  return { useRouter: () => ({ push: mockPush }), useFocusEffect: (effect: () => void) => { mockFocus.run = effect; useEffect(effect, [effect]); } };
 });
 
 const notice = (id: string, title: string, createdAt: string) => ({ id, eventId: id, kind: 'order_ready', orderId: 'p', orderNumber: 'UC1', title, message: `${title} detalle`, createdAt });
@@ -36,4 +37,11 @@ test('si no se pueden consultar se avisa y se reintenta al pulsar', async () => 
   await render(<NotificationsScreen service={service} />);
   await fireEvent.press(await screen.findByRole('button', { name: 'Reintentar' }));
   expect(await screen.findByText('Pedido cancelado')).toBeTruthy();
+});
+
+test('tocar un aviso abre el seguimiento de su pedido', async () => {
+  const service = jest.fn().mockResolvedValue(response('OK', 'Avisos consultados.', { notices: [{ ...notice('e', 'Pedido listo', '2026-11-09T12:00:00Z'), orderId: 'UC2003' }] }));
+  await render(<NotificationsScreen service={service} />);
+  await fireEvent.press(await screen.findByRole('button', { name: 'Ver el pedido de Pedido listo' }));
+  expect(mockPush).toHaveBeenCalledWith({ pathname: '/order/[id]', params: { id: 'UC2003' } });
 });

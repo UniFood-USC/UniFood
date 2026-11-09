@@ -19,7 +19,6 @@ function Navigator() {
     <Stack.Screen name="reset" options={{ headerShown: false }} />
     <Stack.Protected guard={identity?.role === 'student'}>
       <Stack.Screen name="student" options={{ headerShown: false }} />
-      <Stack.Screen name="order/[id]" />
       <Stack.Screen name="orders" />
       <Stack.Screen name="restaurants" />
     </Stack.Protected>
@@ -29,6 +28,10 @@ function Navigator() {
     </Stack.Protected>
     <Stack.Protected guard={identity?.role === 'student' || identity?.role === 'restaurant'}>
       <Stack.Screen name="notifications" options={{ title: 'Avisos' }} />
+    </Stack.Protected>
+    {/* El seguimiento lo abren los tres roles; el servicio solo entrega pedidos que les corresponden. */}
+    <Stack.Protected guard={!!identity}>
+      <Stack.Screen name="order/[id]" />
     </Stack.Protected>
     <Stack.Protected guard={identity?.role === 'admin'}>
       <Stack.Screen name="admin" options={{ headerShown: false }} />
