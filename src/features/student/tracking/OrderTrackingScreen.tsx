@@ -2,20 +2,29 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { useRouter } from 'expo-router';
 import { colors } from '../../../constants/theme';
 import { routes } from '../../../constants/routes';
-import { Order } from '../../../types/domain';
 import { EstimateNotice } from '../../../components/EstimateNotice';
 import { OrderActions } from '../../../components/OrderActions';
 import { OrderStatusStepper } from './OrderStatusStepper';
-import { MOCK_ACTORS, mockOrders, restaurantName } from '../../../services/orders/orderRepository';
-import { STATUS_FLOW, statusLabel } from '../../../services/orders/statusFlow';
+import { restaurantName } from '../../../services/orders/orderRepository';
+import type { OrderRepository } from '../../../services/orders/orderRepository';
+import { serverOrderRepository } from '../../../services/orders/serverOrderRepository';
+import { statusLabel } from '../../../services/orders/statusFlow';
 import { useOrderTracking } from './useOrderTracking';
+import { useSession } from '../../identity/SessionProvider';
 
 const fmt = (iso: string) =>
   new Date(iso).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' });
 
-export default function OrderTrackingScreen({ orderId = 'UC1023' }: { orderId?: string }) {
+export default function OrderTrackingScreen({
+  orderId = '',
+  repository = serverOrderRepository,
+}: {
+  orderId?: string;
+  repository?: Pick<OrderRepository, 'subscribe'>;
+}) {
   const router = useRouter();
-  const { order, error, loading } = useOrderTracking(mockOrders.repo, orderId);
+  const { identity } = useSession();
+  const { order, error, loading } = useOrderTracking(repository, orderId);
 
   const goBack = () => (router.canGoBack() ? router.back() : router.replace(routes.orders));
 
@@ -68,9 +77,10 @@ export default function OrderTrackingScreen({ orderId = 'UC1023' }: { orderId?: 
         </>
       )}
 
-      <OrderActions order={order} actor={MOCK_ACTORS.student} />
-
-      {__DEV__ && <DevControls order={order} />}
+      {identity && <OrderActions
+        order={order}
+        actor={{ id: identity.id, role: identity.role, ...(identity.restaurantId ? { restaurantId: identity.restaurantId } : {}) }}
+      />}
     </ScrollView>
   );
 }
@@ -81,27 +91,6 @@ function Message({ text, onBack }: { text: string; onBack: () => void }) {
       <Text style={[styles.body, { textAlign: 'center' }]}>{text}</Text>
       <Pressable accessibilityRole="button" style={styles.button} onPress={onBack}>
         <Text style={styles.buttonText}>Volver</Text>
-      </Pressable>
-    </View>
-  );
-}
-
-// Solo desarrollo: simula al restaurante cambiando el estado de este pedido
-function DevControls({ order }: { order: Order }) {
-  return (
-    <View style={styles.card}>
-      <Text style={styles.detail}>Controles de prueba (solo desarrollo)</Text>
-      {STATUS_FLOW[order.mode].slice(1).map((s) => (
-        <Pressable key={s} accessibilityRole="button" style={styles.button} onPress={() => mockOrders.setStatus(order.id, s)}>
-          <Text style={styles.buttonText}>Simular: {statusLabel(s, order.mode)}</Text>
-        </Pressable>
-      ))}
-      <Pressable
-        accessibilityRole="button"
-        style={styles.button}
-        onPress={() => mockOrders.patch(order.id, { status: 'cancelled', cancelledBy: 'restaurant', cancelReason: 'Producto agotado' })}
-      >
-        <Text style={styles.buttonText}>Simular: cancelado</Text>
       </Pressable>
     </View>
   );
@@ -122,7 +111,6 @@ const styles = StyleSheet.create({
   notice: { padding: 18, borderRadius: 16, backgroundColor: colors.accent },
   card: { padding: 18, borderWidth: 1, borderColor: colors.border, borderRadius: 16, backgroundColor: colors.surface, gap: 8 },
   body: { color: colors.ink, fontSize: 16, lineHeight: 24 },
-  detail: { fontSize: 14, color: colors.muted },
   button: { backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16, minHeight: 44, justifyContent: 'center', alignItems: 'center' },
   buttonText: { color: colors.surface, fontWeight: '600', fontSize: 16 },
 });

@@ -3,6 +3,9 @@ import OrderTrackingScreen from '../../src/features/student/tracking/OrderTracki
 import { mockOrders } from '../../src/services/orders/orderRepository';
 
 jest.mock('expo-router', () => ({ useRouter: () => ({ canGoBack: () => false, replace: jest.fn() }) }));
+jest.mock('../../src/features/identity/SessionProvider', () => ({
+  useSession: () => ({ identity: { id: 'mock-student', role: 'student', state: 'active' } }),
+}));
 
 test('el aviso de demora se actualiza con el reloj y el temporizador se limpia al salir', async () => {
   jest.useFakeTimers();
@@ -11,7 +14,7 @@ test('el aviso de demora se actualiza con el reloj y el temporizador se limpia a
   jest.setSystemTime(new Date('2026-10-08T15:00:00Z'));
   mockOrders.patch('UC1023', { status: 'preparing', estimatedReadyAt: '2026-10-08T15:00:20Z' });
   try {
-    const { unmount } = await render(<OrderTrackingScreen />);
+    const { unmount } = await render(<OrderTrackingScreen orderId="UC1023" repository={mockOrders.repo} />);
     expect(screen.queryByText(/está tardando/)).toBeNull();
     await act(() => jest.advanceTimersByTime(30_000));
     expect(screen.getByText(/está tardando/)).toBeTruthy();

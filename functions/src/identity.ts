@@ -5,7 +5,7 @@ import { response, type ResultCode } from '../../src/domain/response';
 import { createClock } from '../../src/domain/clock';
 import { readAdminControl } from './adminControl';
 
-type Profile = { id: string; name: string; email: string; role: 'student' | 'restaurant' | 'admin'; state: 'active' | 'suspended' | 'deleted'; sessionVersion: number; createdAt: string; provisioning?: boolean };
+type Profile = { id: string; name: string; email: string; role: 'student' | 'restaurant' | 'admin'; state: 'active' | 'suspended' | 'deleted'; sessionVersion: number; createdAt: string; provisioning?: boolean; restaurantId?: string };
 export const emailKey = (email: string) => createHash('sha256').update(email).digest('hex');
 
 async function persistProfile(profile: Profile) {
@@ -92,7 +92,12 @@ export async function checkedIdentity(authorization: string | undefined, input: 
   const profile = (await db.doc(`users/${token.uid}`).get()).data() as Profile | undefined;
   if (!profile || profile.state !== 'active' || profile.provisioning) reject('ACCESO_BLOQUEADO', 'La cuenta no tiene acceso.');
   if (!['student', 'restaurant', 'admin'].includes(profile!.role)) reject('NO_AUTORIZADO', 'La cuenta no tiene un rol autorizado.');
-  return { id: token.uid, role: profile!.role, state: profile!.state };
+  return {
+    id: token.uid,
+    role: profile!.role,
+    state: profile!.state,
+    ...(profile!.role === 'restaurant' && profile!.restaurantId ? { restaurantId: profile!.restaurantId } : {}),
+  };
 }
 
 export async function createAdministrativeAccount(authorization: string | undefined, input: unknown) {

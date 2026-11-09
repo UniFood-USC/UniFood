@@ -5,10 +5,12 @@ import { colors } from '../../../constants/theme';
 import { routes } from '../../../constants/routes';
 import { Order } from '../../../types/domain';
 import { canRateOrder } from '../../../domain/ratings';
-import { MOCK_STUDENT_ID, mockOrders, restaurantName } from '../../../services/orders/orderRepository';
+import { restaurantName } from '../../../services/orders/orderRepository';
+import { serverOrderRepository } from '../../../services/orders/serverOrderRepository';
 import { isTerminal, statusLabel } from '../../../services/orders/statusFlow';
 import { OrderRatingEditor } from './OrderRatingEditor';
 import { useOrders } from '../../../services/orders/useOrders';
+import { useSession } from '../../identity/SessionProvider';
 
 type Tab = 'active' | 'history';
 
@@ -27,9 +29,12 @@ function formatWhen(iso: string) {
 
 export default function OrdersScreen() {
   const router = useRouter();
+  const { identity } = useSession();
   const goBack = () => router.back();
   const [tab, setTab] = useState<Tab>('active');
-  const { orders, error, loading } = useOrders(mockOrders.repo, { studentId: MOCK_STUDENT_ID });
+  const { orders, error, loading } = useOrders(serverOrderRepository, {
+    ...(identity?.id ? { studentId: identity.id } : {}),
+  });
 
   const visible = [...orders]
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
@@ -75,7 +80,8 @@ export default function OrdersScreen() {
           <OrderCard
             key={o.id}
             order={o}
-            canRate={tab === 'history' && canRateOrder(o, MOCK_STUDENT_ID)}
+            studentId={identity?.id ?? ''}
+            canRate={tab === 'history' && !!identity?.id && canRateOrder(o, identity.id)}
             onOpen={() => router.push(routes.orderTracking(o.id))}
           />
         ))
@@ -84,7 +90,12 @@ export default function OrdersScreen() {
   );
 }
 
-function OrderCard({ order, canRate, onOpen }: { order: Order; canRate: boolean; onOpen: () => void }) {
+function OrderCard({ order, studentId, canRate, onOpen }: {
+  order: Order;
+  studentId: string;
+  canRate: boolean;
+  onOpen: () => void;
+}) {
   const name = restaurantName(order.restaurantId);
   const scheduled = order.status === 'received' && !!order.scheduledFor;
   const when = scheduled ? `Programado · ${formatWhen(order.scheduledFor!)}` : formatWhen(order.createdAt);
@@ -116,8 +127,8 @@ function OrderCard({ order, canRate, onOpen }: { order: Order; canRate: boolean;
       {canRate && (
         <OrderRatingEditor
           order={order}
-          studentId={MOCK_STUDENT_ID}
-          authorName="Estudiante de prueba"
+          studentId={studentId}
+          authorName="Estudiante"
         />
       )}
     </View>

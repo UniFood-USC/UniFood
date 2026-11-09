@@ -3,7 +3,8 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors } from '../constants/theme';
 import { Order } from '../types/domain';
 import { Actor, Change, MAX_ESTIMATE, MIN_ESTIMATE, allowedActions, isValidEstimate } from '../services/orders/changeOrder';
-import { OrderRepository, mockOrders } from '../services/orders/orderRepository';
+import type { OrderRepository } from '../services/orders/orderRepository';
+import { serverOrderRepository } from '../services/orders/serverOrderRepository';
 import { statusLabel } from '../services/orders/statusFlow';
 
 const ESTIMATE_HINT = `Minutos enteros, de ${MIN_ESTIMATE} a ${MAX_ESTIMATE}`;
@@ -15,7 +16,7 @@ function advanceLabel(order: Order, next: Order['status']) {
   return `Marcar: ${statusLabel(next, order.mode)}`;
 }
 
-export function OrderActions({ order, actor, repository = mockOrders.repo }: {
+export function OrderActions({ order, actor, repository = serverOrderRepository }: {
   order: Order; actor: Actor; repository?: OrderRepository;
 }) {
   const [cancelling, setCancelling] = useState(false);
