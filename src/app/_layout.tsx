@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { colors } from '../constants/theme';
 import { SessionProvider, useSession } from '../features/identity/SessionProvider';
+import { NoticeAlerts } from '../features/notifications/NoticeAlerts';
 
 export default function RootLayout() {
   return <SessionProvider><Navigator /></SessionProvider>;
@@ -10,7 +11,7 @@ export default function RootLayout() {
 // Cada rol tiene su grupo de pestañas; las pantallas de detalle se abren encima, con la misma protección.
 function Navigator() {
   const { identity } = useSession();
-  return <><StatusBar style="dark" /><Stack screenOptions={{ headerTintColor: colors.ink, headerStyle: { backgroundColor: colors.background }, headerShadowVisible: false }}>
+  return <><StatusBar style="dark" />{(identity?.role === 'student' || identity?.role === 'restaurant') && <NoticeAlerts />}<Stack screenOptions={{ headerTintColor: colors.ink, headerStyle: { backgroundColor: colors.background }, headerShadowVisible: false }}>
     <Stack.Screen name="index" options={{ headerShown: false }} />
     <Stack.Screen name="login" options={{ headerShown: false }} />
     <Stack.Screen name="register" options={{ title: 'Crear cuenta', headerShown: false }} />
@@ -25,6 +26,9 @@ function Navigator() {
     <Stack.Protected guard={identity?.role === 'restaurant'}>
       <Stack.Screen name="restaurant" options={{ headerShown: false }} />
       <Stack.Screen name="restaurant-sales" options={{ title: 'Historial de ventas' }} />
+    </Stack.Protected>
+    <Stack.Protected guard={identity?.role === 'student' || identity?.role === 'restaurant'}>
+      <Stack.Screen name="notifications" options={{ title: 'Avisos' }} />
     </Stack.Protected>
     <Stack.Protected guard={identity?.role === 'admin'}>
       <Stack.Screen name="admin" options={{ headerShown: false }} />

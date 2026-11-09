@@ -40,9 +40,14 @@ export default function StudentScreen() {
     <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.top}>
         <Brand width={160} horizontal />
-        <Pressable accessibilityRole="button" accessibilityLabel="Perfil" onPress={() => router.push('/student/profile')} style={styles.avatar}>
-          <Feather name="user" size={22} color={colors.ink} accessible={false} />
-        </Pressable>
+        <View style={styles.actions}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Avisos" onPress={() => router.push('/notifications')} style={styles.avatar}>
+            <Feather name="bell" size={22} color={colors.ink} accessible={false} />
+          </Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Perfil" onPress={() => router.push('/student/profile')} style={styles.avatar}>
+            <Feather name="user" size={22} color={colors.ink} accessible={false} />
+          </Pressable>
+        </View>
       </View>
       <Text accessibilityRole="header" style={styles.greeting}>{firstName ? `¡Hola, ${firstName}! 👋` : '¡Hola! 👋'}</Text>
       <Text style={styles.question}>¿Qué quieres comer hoy?</Text>
@@ -68,6 +73,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: 20, gap: 14, width: '100%', maxWidth: 760, alignSelf: 'center' },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  actions: { flexDirection: 'row', gap: 10 },
   avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accent },
   greeting: { fontSize: 26, fontWeight: '700', color: colors.ink },
   question: { fontSize: 16, color: colors.muted, marginTop: -8 },

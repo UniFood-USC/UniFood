@@ -26,7 +26,20 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-asset"
-    ]
+      "expo-asset",
+      [
+        "expo-notifications",
+        {
+          "color": "#C8440A",
+          "defaultChannel": "avisos"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "6fc2d148-40e1-4e93-b690-b73158024e48"
+      }
+    },
+    "owner": "osinisterra999"
   }
 }
