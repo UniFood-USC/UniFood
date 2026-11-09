@@ -4,6 +4,8 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { emailKey } from '../functions/src/identity';
 import { readAdminControl } from '../functions/src/adminControl';
 import { seedMenus } from './seed-menu';
+import { exampleProducts } from '../src/features/cart/exampleProducts';
+import type { Order } from '../src/types/domain';
 
 export async function seedDemo() {
   if (process.env.GCLOUD_PROJECT !== 'demo-unifood' || !process.env.FIREBASE_AUTH_EMULATOR_HOST || !process.env.FIRESTORE_EMULATOR_HOST) {
@@ -14,7 +16,7 @@ export async function seedDemo() {
     { id: 'demo-admin-1', email: 'admin1@usc.edu.co', name: 'Administrador Demo Uno', role: 'admin' },
     { id: 'demo-admin-2', email: 'admin2@example.test', name: 'Administrador Demo Dos', role: 'admin' },
     { id: 'demo-student', email: 'student@usc.edu.co', name: 'Estudiante Demo', role: 'student' },
-    { id: 'demo-restaurant', email: 'restaurant@example.test', name: 'Restaurante Demo', role: 'restaurant' },
+    { id: 'demo-restaurant', email: 'restaurant@example.test', name: 'Restaurante Demo', role: 'restaurant', restaurantId: 'rest-burger' },
   ];
   for (const user of users) {
     try { await getAuth().createUser({ uid: user.id, email: user.email, password: 'Demo1234', displayName: user.name }); }
@@ -24,13 +26,43 @@ export async function seedDemo() {
       const ref = db.doc(`users/${user.id}`);
       const old = (await tx.get(ref)).data();
       const control = user.role === 'admin' ? await readAdminControl(tx, db) : null;
-      tx.set(ref, { ...user, state: 'active', version: 1, sessionVersion: 1, createdAt: '2026-10-04T00:00:00Z' });
+      // La cuenta de restaurante administra Burger Campus: el servicio de pedidos filtra por este campo.
+      tx.set(ref, { ...user, ...(user.role === 'restaurant' ? { restaurantId: 'rest-burger' } : {}), state: 'active', version: 1, sessionVersion: 1, createdAt: '2026-10-04T00:00:00Z' });
       tx.set(db.doc(`emailReservations/${emailKey(user.email)}`), { userId: user.id });
       if (control) tx.set(control.ref, { activeCount: control.activeCount + (old?.role === 'admin' && old.state === 'active' ? 0 : 1), version: control.version + 1 });
     });
   }
+  // El estudiante demo empieza con un carrito de ejemplo mientras no exista el menú.
+  await getFirestore().doc('carts/demo-student').set({ userId: 'demo-student', restaurantId: 'rest-burger', lines: exampleProducts.map(product => ({ productId: product.id, quantity: 1 })), version: 1, updatedAt: '2026-10-04T00:00:00Z' });
   await seedRestaurants();
   await seedMenus();   // RF-06: sin esto los restaurantes quedarían sin ningún producto
+  await seedOrders();
+}
+
+// Pedidos de ejemplo guardados (colección orders, con la forma de Order del módulo de pedidos)
+// para que el seguimiento, los estados y las ventas se prueben con datos persistidos. Crear
+// pedidos desde la compra llegará después; estos solo sirven a la demo y a las pruebas.
+export async function seedOrders(now = Date.now()) {
+  const at = (minutesAgo: number) => new Date(now - minutesAgo * 60_000).toISOString();
+  const history = (steps: [string, number][]) => Object.fromEntries(steps.map(([status, minutes]) => [status, at(minutes)]));
+  const base = { studentId: 'demo-student', restaurantId: 'rest-burger', paymentMethod: 'nequi', total: 23250, paid: true, version: 1 } as const;
+  const orders: Order[] = [
+    { ...base, id: 'UC2001', mode: 'pickup', status: 'received', statusHistory: history([['received', 2]]), createdAt: at(2), updatedAt: at(2) },
+    { ...base, id: 'UC2002', mode: 'delivery', status: 'preparing', estimateMinutes: 20, estimatedReadyAt: at(-12),
+      statusHistory: history([['received', 15], ['preparing', 8]]), createdAt: at(15), updatedAt: at(8) },
+    { ...base, id: 'UC2003', mode: 'pickup', status: 'ready', paymentMethod: 'cash', paid: false, total: 18000,
+      statusHistory: history([['received', 30], ['preparing', 25], ['ready', 3]]), createdAt: at(30), updatedAt: at(3) },
+    { ...base, id: 'UC2004', mode: 'pickup', status: 'collected',
+      statusHistory: history([['received', 240], ['preparing', 230], ['ready', 220], ['collected', 210]]), createdAt: at(240), updatedAt: at(210) },
+    { ...base, id: 'UC2005', mode: 'delivery', status: 'delivered',
+      statusHistory: history([['received', 1500], ['preparing', 1490], ['ready', 1480], ['on_the_way', 1470], ['delivered', 1460]]), createdAt: at(1500), updatedAt: at(1460) },
+    { ...base, id: 'UC2006', mode: 'pickup', status: 'cancelled', cancelledBy: 'restaurant', cancelReason: 'Producto agotado',
+      refund: { amount: 23250, at: at(2890) }, statusHistory: history([['received', 2900], ['cancelled', 2890]]), createdAt: at(2900), updatedAt: at(2890) },
+    { ...base, id: 'UC2007', restaurantId: 'rest-pizza', mode: 'pickup', status: 'collected', total: 18000,
+      statusHistory: history([['received', 3000], ['preparing', 2990], ['ready', 2980], ['collected', 2970]]), createdAt: at(3000), updatedAt: at(2970) },
+  ];
+  const db = getFirestore();
+  await Promise.all(orders.map(({ id, ...order }) => db.doc(`orders/${id}`).set(order)));
 }
 
 // RF-04 · Restaurantes ficticios del campus (colección `restaurantes`).

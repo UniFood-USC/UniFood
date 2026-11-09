@@ -15,7 +15,7 @@ type Props = {
   sessionMessage?: string;
 };
 export default function LoginScreen({ signIn, onRegister, onRecover, sessionMessage }: Props) {
-  const { width, height } = useWindowDimensions();
+  const { width } = useWindowDimensions();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [visible, setVisible] = useState(false);
@@ -36,7 +36,7 @@ export default function LoginScreen({ signIn, onRegister, onRecover, sessionMess
   }
   return <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
     <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={styles.scroll}>
-      <View style={[styles.canvas, { minHeight: height }]}>
+      <View style={styles.canvas}>
         <View pointerEvents="none" style={styles.background}>
           <Image accessible={false} source={require('../../../assets/fondo-iniciar-sesion.png')} resizeMode="contain" style={styles.image} />
         </View>
@@ -77,7 +77,7 @@ export default function LoginScreen({ signIn, onRegister, onRecover, sessionMess
 }
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FAF7F2' }, scroll: { flexGrow: 1 },
-  canvas: { width: '100%', maxWidth: 480, alignSelf: 'center', overflow: 'hidden' },
+  canvas: { flexGrow: 1, width: '100%', maxWidth: 480, alignSelf: 'center', overflow: 'hidden' },
   background: { position: 'absolute', bottom: 0, width: '100%', aspectRatio: 390 / 844 }, image: { width: '100%', height: '100%' },
   content: { paddingHorizontal: 26, paddingTop: 40, gap: 16 }, brand: { alignItems: 'center', marginBottom: 24 },
   title: { fontSize: 28, fontWeight: '700', color: colors.ink },

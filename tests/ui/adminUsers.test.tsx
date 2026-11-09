@@ -61,3 +61,56 @@ test('bloquea doble envío y conserva el formulario ante conflicto', async () =>
   expect(await screen.findByText('La cuenta cambió. Consulta el listado.')).toBeTruthy();
   expect(screen.getByLabelText('Correo electrónico').props.value).toBe(user.email);
 });
+
+test('suspender pide confirmación, envía el cambio y refleja el nuevo estado', async () => {
+  const service = jest.fn()
+    .mockResolvedValueOnce(response('OK', 'Usuarios consultados.', { users: [user] }))
+    .mockResolvedValueOnce(response('OK', 'Cuenta suspendida.'))
+    .mockResolvedValueOnce(response('OK', 'Usuarios consultados.', { users: [{ ...user, state: 'suspended' }] }));
+  await render(<UsersScreen service={service} />);
+  await fireEvent.press(await screen.findByRole('button', { name: 'Suspender Estudiante Demo' }));
+  expect(service).toHaveBeenCalledTimes(1);
+  expect(screen.getByText(/Perderá el acceso de inmediato/)).toBeTruthy();
+  await fireEvent.press(screen.getByRole('button', { name: 'Confirmar suspensión' }));
+  expect(service).toHaveBeenCalledWith('users/state', { id: 'student', state: 'suspended' });
+  expect(await screen.findByText('Cuenta suspendida.')).toBeTruthy();
+  expect(await screen.findByText('Estudiante · Suspendido')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Reactivar Estudiante Demo' })).toBeTruthy();
+});
+
+test('cancelar no envía nada y los restaurantes no muestran suspender', async () => {
+  const service = jest.fn().mockResolvedValue(response('OK', 'Usuarios consultados.', { users: [user, { ...user, id: 'r1', name: 'Restaurante Demo', role: 'restaurant' }] }));
+  await render(<UsersScreen service={service} />);
+  await fireEvent.press(await screen.findByRole('button', { name: 'Suspender Estudiante Demo' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Cancelar' }));
+  expect(service).not.toHaveBeenCalledWith('users/state', expect.anything());
+  expect(screen.queryByRole('button', { name: 'Suspender Restaurante Demo' })).toBeNull();
+});
+
+test('eliminar pide confirmación, avisa que no se puede deshacer y deja la cuenta sin acciones', async () => {
+  const service = jest.fn()
+    .mockResolvedValueOnce(response('OK', 'Usuarios consultados.', { users: [user] }))
+    .mockResolvedValueOnce(response('OK', 'Cuenta eliminada.'))
+    .mockResolvedValueOnce(response('OK', 'Usuarios consultados.', { users: [{ ...user, state: 'deleted' }] }));
+  await render(<UsersScreen service={service} />);
+  await fireEvent.press(await screen.findByRole('button', { name: 'Eliminar Estudiante Demo' }));
+  expect(service).toHaveBeenCalledTimes(1);
+  expect(screen.getByText(/No se puede deshacer/)).toBeTruthy();
+  await fireEvent.press(screen.getByRole('button', { name: 'Confirmar eliminación' }));
+  expect(service).toHaveBeenCalledWith('users/delete', { id: 'student' });
+  expect(await screen.findByText('Cuenta eliminada.')).toBeTruthy();
+  expect(await screen.findByText('Estudiante · Eliminado')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Eliminar Estudiante Demo' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Editar Estudiante Demo' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Reactivar Estudiante Demo' })).toBeNull();
+});
+
+test('cancelar la eliminación no envía nada y los restaurantes no muestran eliminar', async () => {
+  const service = jest.fn().mockResolvedValue(response('OK', 'Usuarios consultados.', { users: [user, { ...user, id: 'r1', name: 'Restaurante Demo', role: 'restaurant' }] }));
+  await render(<UsersScreen service={service} />);
+  await fireEvent.press(await screen.findByRole('button', { name: 'Eliminar Estudiante Demo' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Cancelar' }));
+  expect(service).not.toHaveBeenCalledWith('users/delete', expect.anything());
+  expect(screen.queryByText(/No se puede deshacer/)).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Eliminar Restaurante Demo' })).toBeNull();
+});

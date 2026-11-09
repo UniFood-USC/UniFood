@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Order } from '../../../types/domain';
-import { OrderRepository } from './orderRepository';
+import { OrderRepository } from '../../../services/orders/orderRepository';
 
-export function useOrderTracking(repo: OrderRepository, orderId: string) {
+// El seguimiento solo necesita suscribirse a un pedido.
+type Subscriber = Pick<OrderRepository, 'subscribe'>;
+
+export function useOrderTracking(repo: Subscriber, orderId: string) {
   const [state, setState] = useState<{
-    repo: OrderRepository;
+    repo: Subscriber;
     orderId: string;
     order: Order | null;
     error: Error | null;

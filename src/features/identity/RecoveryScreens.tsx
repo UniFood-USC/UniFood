@@ -89,10 +89,10 @@ export function ResetPasswordScreen({ id, code, complete, onLogin, onRequestNew,
 }
 
 function Layout({ title, onBack, pending, children }: { title: string; onBack: () => void; pending: boolean; children: ReactNode }) {
-  const { width, height } = useWindowDimensions();
+  const { width } = useWindowDimensions();
   return <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
-      <View style={[styles.canvas, { minHeight: height }]}>
+      <View style={styles.canvas}>
       {/* Mismo fondo que el inicio de sesión. */}
       <View pointerEvents="none" style={styles.background}>
         <Image accessible={false} source={require('../../../assets/fondo-iniciar-sesion.png')} resizeMode="contain" style={styles.image} />
@@ -138,7 +138,7 @@ function BackLink({ onPress, disabled }: { onPress: () => void; disabled: boolea
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FAF7F2' }, scroll: { flexGrow: 1 },
-  canvas: { width: '100%', maxWidth: 480, alignSelf: 'center', overflow: 'hidden' },
+  canvas: { flexGrow: 1, width: '100%', maxWidth: 480, alignSelf: 'center', overflow: 'hidden' },
   background: { position: 'absolute', bottom: 0, width: '100%', aspectRatio: 390 / 844 }, image: { width: '100%', height: '100%' },
   content: { paddingHorizontal: 26, paddingTop: 12, gap: 16 },
   back: { width: 44, height: 44, justifyContent: 'center', marginLeft: -14 }, brand: { alignItems: 'center', marginBottom: 16 },

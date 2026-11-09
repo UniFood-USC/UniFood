@@ -2,10 +2,11 @@ import { initializeApp } from 'firebase-admin/app';
 import { onRequest } from 'firebase-functions/v2/https';
 import { checkedIdentity, registerStudent, createAdministrativeAccount, ownProfile } from './identity';
 import { response, type ResultCode } from '../../src/domain/response';
-import { listUsers, updateUserContact } from './users';
+import { changeUserState, deleteAccount, listUsers, updateUserContact } from './users';
 import { completeRecovery, requestRecovery } from './recovery';
 import { listRestaurants } from './restaurants';
 import { readMenu, readProduct } from './menu';
+import { changeOrder, getOrder, listOrders } from './orders';
 
 initializeApp();
 export const api = onRequest({ cors: true, maxInstances: 2 }, async (request, reply) => {
@@ -18,7 +19,23 @@ export const api = onRequest({ cors: true, maxInstances: 2 }, async (request, re
       const result = request.path === '/restaurants/list' ? await listRestaurants(request.headers.authorization)
         : request.path === '/menu/list' ? await readMenu(request.headers.authorization, request.body)
         : request.path === '/menu/product' ? await readProduct(request.headers.authorization, request.body)
+  if (['/identity', '/profile', '/users/create', '/users/list', '/users/update', '/users/state', '/restaurants/list', '/orders/list', '/orders/get', '/orders/change'].includes(request.path)) {
+    try {
+      const result = request.path === '/restaurants/list' ? await listRestaurants(request.headers.authorization)
+        : request.path === '/orders/list' ? await listOrders(request.headers.authorization, request.body)
+        : request.path === '/orders/get' ? await getOrder(request.headers.authorization, request.body)
+        : request.path === '/orders/change' ? await changeOrder(request.headers.authorization, request.body)
+  if (['/identity', '/profile', '/users/create', '/users/list', '/users/update', '/users/state', '/users/delete', '/restaurants/list', '/cart/get', '/cart/save', '/notifications/list', '/devices/register', '/devices/unregister'].includes(request.path)) {
+    try {
+      const result = request.path === '/restaurants/list' ? await listRestaurants(request.headers.authorization)
+        : request.path === '/cart/get' ? await readCart(request.headers.authorization)
+        : request.path === '/notifications/list' ? await listNotices(request.headers.authorization)
+        : request.path === '/devices/register' ? await registerDevice(request.headers.authorization, request.body)
+        : request.path === '/devices/unregister' ? await unregisterDevice(request.headers.authorization, request.body)
+        : request.path === '/cart/save' ? await saveCart(request.headers.authorization, request.body)
         : request.path === '/users/list' ? await listUsers(request.headers.authorization)
+        : request.path === '/users/state' ? await changeUserState(request.headers.authorization, request.body)
+        : request.path === '/users/delete' ? await deleteAccount(request.headers.authorization, request.body)
         : request.path === '/users/update' ? await updateUserContact(request.headers.authorization, request.body)
         : request.path === '/users/create'
         ? await createAdministrativeAccount(request.headers.authorization, request.body)

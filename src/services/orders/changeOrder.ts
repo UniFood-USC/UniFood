@@ -3,14 +3,28 @@ import { STATUS_FLOW } from './statusFlow';
 
 export interface Actor { role: UserRole; id: string; restaurantId?: string }
 
+export const MIN_ESTIMATE = 1;
+export const MAX_ESTIMATE = 180;
+const ESTIMATE_MESSAGE = `Indica el tiempo estimado de preparación en minutos enteros, de ${MIN_ESTIMATE} a ${MAX_ESTIMATE}.`;
+
+export const isValidEstimate = (minutes: unknown): minutes is number =>
+  typeof minutes === 'number' && Number.isInteger(minutes) && minutes >= MIN_ESTIMATE && minutes <= MAX_ESTIMATE;
+
+// La referencia del tiempo restante se reinicia cada vez que se registra una estimación.
+const estimateFields = (minutes: number, now: Date): Partial<Order> & { estimateMinutes: number; estimatedReadyAt: string } => ({
+  estimateMinutes: minutes,
+  estimatedReadyAt: new Date(now.getTime() + minutes * 60_000).toISOString(),
+});
+
 export type Change =
-  | { type: 'advance' }
+  | { type: 'advance'; estimateMinutes?: number } // estimateMinutes es obligatorio al pasar a en preparación
   | { type: 'cancel'; reason?: string }
-  | { type: 'registerPayment' };
+  | { type: 'registerPayment' }
+  | { type: 'updateEstimate'; minutes: number };
 
 export type ChangeError =
   | 'not_found' | 'stale_version' | 'not_allowed' | 'invalid_transition'
-  | 'terminal' | 'reason_required' | 'payment_required';
+  | 'terminal' | 'reason_required' | 'payment_required' | 'invalid_estimate';
 
 export type ChangeResult =
   | { ok: true; order: Order }
@@ -68,7 +82,7 @@ export function applyChange(
     });
   }
 
-  // Avanzar estado y registrar pago: solo el restaurante dueño.
+  // Avanzar estado, registrar pago y estimar: solo el restaurante dueño.
   if (actor.role !== 'restaurant' || !isOwner(order, actor)) {
     return fail('not_allowed', 'Solo el restaurante del pedido puede hacer este cambio.', order);
   }
@@ -78,23 +92,41 @@ export function applyChange(
     return done({ paid: true });
   }
 
+  if (change.type === 'updateEstimate') {
+    if (order.status !== 'preparing') {
+      return fail('invalid_transition', 'Solo se puede actualizar la estimación mientras el pedido está en preparación.', order);
+    }
+    if (!isValidEstimate(change.minutes)) return fail('invalid_estimate', ESTIMATE_MESSAGE, order);
+    return done(estimateFields(change.minutes, now));
+  }
+
   const flow = STATUS_FLOW[order.mode];
   const next = flow[flow.indexOf(order.status) + 1];
   if (!next) return fail('invalid_transition', 'Ese pedido no tiene un siguiente estado.', order);
+  if (next === 'preparing' && !isValidEstimate(change.estimateMinutes)) {
+    return fail('invalid_estimate', ESTIMATE_MESSAGE, order);
+  }
   if (next === 'collected' && !(order.paid || order.total === 0)) {
     return fail('payment_required', 'Registra el pago antes de confirmar la entrega.', order);
   }
-  return done({ status: next, statusHistory: { ...order.statusHistory, [next]: iso } });
+  return done({
+    status: next,
+    statusHistory: { ...order.statusHistory, [next]: iso },
+    ...(next === 'preparing' ? estimateFields(change.estimateMinutes as number, now) : {}),
+  });
 }
 
 // Qué puede hacer este actor con este pedido (usa las mismas reglas de arriba).
 export function allowedActions(order: Order, actor: Actor) {
-  const adv = applyChange(order, { type: 'advance' }, actor, order.version);
+  const adv = applyChange(order, { type: 'advance', estimateMinutes: MIN_ESTIMATE }, actor, order.version);
   const can = applyChange(order, { type: 'cancel', reason: 'probe' }, actor, order.version);
+  const upd = applyChange(order, { type: 'updateEstimate', minutes: MIN_ESTIMATE }, actor, order.version);
   const needsPayment = !adv.ok && adv.error === 'payment_required';
   return {
     canAdvance: adv.ok,
     nextStatus: adv.ok ? adv.order.status : null,
+    needsEstimate: adv.ok && adv.order.status === 'preparing',
+    canUpdateEstimate: upd.ok,
     canCancel: can.ok,
     cancelNeedsReason: actor.role !== 'student',
     needsPayment,

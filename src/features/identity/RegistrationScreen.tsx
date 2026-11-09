@@ -11,7 +11,7 @@ import type { ServiceResponse } from '../../domain/response';
 type Props = { register: (input: RegistrationInput) => Promise<ServiceResponse>; onCreated?: () => void; onBack?: () => void; onLogin?: () => void };
 const initial = { name: '', email: '', password: '', confirmPassword: '' };
 export default function RegistrationScreen({ register, onCreated, onBack, onLogin }: Props) {
-  const { width, height } = useWindowDimensions();
+  const { width } = useWindowDimensions();
   const [fields, setFields] = useState(initial);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState('');
@@ -43,7 +43,7 @@ export default function RegistrationScreen({ register, onCreated, onBack, onLogi
   ];
   return <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
     <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={styles.scroll}>
-    <View style={[styles.canvas, { minHeight: height }]}>
+    <View style={styles.canvas}>
       <View pointerEvents="none" style={styles.background}>
         <Image accessible={false} source={require('../../../assets/fondo-crear-cuenta.png')}
           resizeMode="contain" style={{ width: '100%', height: '100%' }} />
@@ -97,7 +97,7 @@ export default function RegistrationScreen({ register, onCreated, onBack, onLogi
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FAF7F2' },
   scroll: { flexGrow: 1 },
-  canvas: { width: '100%', maxWidth: 480, alignSelf: 'center', overflow: 'hidden' },
+  canvas: { flexGrow: 1, width: '100%', maxWidth: 480, alignSelf: 'center', overflow: 'hidden' },
   background: { position: 'absolute', bottom: 0, width: '100%', aspectRatio: 390 / 844 },
   content: { paddingHorizontal: 26, paddingTop: 12 },
   back: { width: 44, height: 44, justifyContent: 'center', marginLeft: -14 },
