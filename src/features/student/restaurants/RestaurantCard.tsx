@@ -1,14 +1,17 @@
 import { useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { menuRoutes } from '../menu/menuRoutes';
 import { colors } from '../../../constants/theme';
 import type { RestaurantePublico } from '../../../types/Estado_Restaurante';
 
 export function RestaurantCard({ restaurant }: { restaurant: RestaurantePublico }) {
+  const router = useRouter();
   const [logoFailed, setLogoFailed] = useState(false);
   const { nombre, logo, disponible, proximaApertura } = restaurant;
   const label = `${nombre}. ${disponible ? 'Abierto' : 'Cerrado'}${proximaApertura ? `. Abre ${proximaApertura}` : ''}`;
   return (
-    <View accessible accessibilityLabel={label} style={styles.card}>
+    <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityHint="Ver el menú" onPress={() => router.push(menuRoutes.restaurantMenu(restaurant.id))} style={styles.card}>
       {logo && !logoFailed
         ? <Image source={{ uri: logo }} onError={() => setLogoFailed(true)} accessibilityIgnoresInvertColors style={styles.logo} />
         : <View importantForAccessibility="no-hide-descendants" style={[styles.logo, styles.placeholder]}>
@@ -22,7 +25,7 @@ export function RestaurantCard({ restaurant }: { restaurant: RestaurantePublico 
         </View>
         {!!proximaApertura && <Text style={styles.opens}>Abre: {proximaApertura}</Text>}
       </View>
-    </View>
+    </Pressable>
   );
 }
 

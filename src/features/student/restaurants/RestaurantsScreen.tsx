@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Feedback } from '../../../components/Feedback';
 import { colors } from '../../../constants/theme';
 import { routes } from '../../../constants/routes';
+import { buscarRestaurantes } from '../../../domain/restaurantSearch';
 import type { ServiceResponse } from '../../../domain/response';
 import type { RestaurantePublico } from '../../../types/Estado_Restaurante';
 import { RestaurantCard } from './RestaurantCard';
@@ -12,6 +13,7 @@ import { RestaurantCard } from './RestaurantCard';
 type Service = (action: 'restaurants/list', input: unknown) => Promise<ServiceResponse>;
 
 // RF-04 · Listado de restaurantes del campus (estudiante).
+// RF-05 · Búsqueda por nombre sobre ese listado (parcial, sin distinguir mayúsculas ni tildes).
 // Muestra ID (interno), nombre, logo y disponibilidad; si no hay resultados, lo informa.
 export default function RestaurantsScreen({ service }: { service: Service }) {
   const router = useRouter();
@@ -19,6 +21,7 @@ export default function RestaurantsScreen({ service }: { service: Service }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [query, setQuery] = useState('');
   const mounted = useRef(true);
 
   const load = useCallback(() => service('restaurants/list', {}).then(result => {
@@ -38,10 +41,12 @@ export default function RestaurantsScreen({ service }: { service: Service }) {
   const retry = () => { setLoading(true); setError(''); void load(); };
   const refresh = () => { setRefreshing(true); void load(); };
   const goBack = () => (router.canGoBack() ? router.back() : router.replace(routes.student));
-  const open = restaurants.filter(r => r.disponible).length;
+  const results = useMemo(() => buscarRestaurantes(restaurants, query), [restaurants, query]);
+  const searched = query.trim().length > 0;
+  const open = results.filter(r => r.disponible).length;
 
   return <SafeAreaView style={styles.screen}>
-    <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} colors={[colors.primary]} />}>
+    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} colors={[colors.primary]} />}>
       <View style={styles.header}>
         <Pressable accessibilityRole="button" accessibilityLabel="Volver" onPress={goBack} style={styles.back}><Text style={styles.backText}>‹</Text></Pressable>
         <Text accessibilityRole="header" style={styles.title}>Restaurantes</Text>
@@ -52,10 +57,30 @@ export default function RestaurantsScreen({ service }: { service: Service }) {
         : error ? <Feedback state="error" message={error} onRetry={retry} />
         : !restaurants.length ? <Feedback state="empty" message="No hay restaurantes para mostrar." />
         : <>
-          <Text accessibilityLiveRegion="polite" style={styles.count}>
-            {restaurants.length === 1 ? '1 restaurante' : `${restaurants.length} restaurantes`} en el campus · {open} {open === 1 ? 'abierto' : 'abiertos'} ahora
-          </Text>
-          {restaurants.map(restaurant => <RestaurantCard key={restaurant.id} restaurant={restaurant} />)}
+          <View style={styles.searchBox}>
+            <TextInput
+              accessibilityLabel="Buscar restaurantes"
+              placeholder="Buscar restaurantes…"
+              placeholderTextColor={colors.muted}
+              value={query}
+              onChangeText={setQuery}
+              autoCorrect={false}
+              autoCapitalize="none"
+              returnKeyType="search"
+              style={styles.input}
+            />
+            {query.length > 0 && <Pressable accessibilityRole="button" accessibilityLabel="Borrar búsqueda" onPress={() => setQuery('')} style={styles.clear}><Text style={styles.clearText}>✕</Text></Pressable>}
+          </View>
+          {!results.length
+            ? <Feedback state="empty" message={`No encontramos restaurantes con "${query.trim()}".`} />
+            : <>
+              <Text accessibilityLiveRegion="polite" style={styles.count}>
+                {searched
+                  ? `${results.length} ${results.length === 1 ? 'resultado' : 'resultados'} para "${query.trim()}"`
+                  : `${results.length === 1 ? '1 restaurante' : `${results.length} restaurantes`} en el campus · ${open} ${open === 1 ? 'abierto' : 'abiertos'} ahora`}
+              </Text>
+              {results.map(restaurant => <RestaurantCard key={restaurant.id} restaurant={restaurant} />)}
+            </>}
         </>}
     </ScrollView>
   </SafeAreaView>;
@@ -70,4 +95,8 @@ const styles = StyleSheet.create({
   title: { flex: 1, textAlign: 'center', fontSize: 24, fontWeight: '700', color: colors.ink },
   subtitle: { fontSize: 16, lineHeight: 24, color: colors.muted, textAlign: 'center' },
   count: { fontSize: 14, color: colors.muted },
+  searchBox: { flexDirection: 'row', alignItems: 'center', minHeight: 48, borderWidth: 1, borderColor: colors.border, borderRadius: 14, backgroundColor: colors.surface, paddingLeft: 14 },
+  input: { flex: 1, minHeight: 48, fontSize: 16, color: colors.ink },
+  clear: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
+  clearText: { fontSize: 16, color: colors.muted },
 });

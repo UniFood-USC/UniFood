@@ -3,6 +3,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { emailKey } from '../functions/src/identity';
 import { readAdminControl } from '../functions/src/adminControl';
+import { seedMenus } from './seed-menu';
 import { exampleProducts } from '../src/features/cart/exampleProducts';
 import type { Order } from '../src/types/domain';
 
@@ -34,6 +35,7 @@ export async function seedDemo() {
   // El estudiante demo empieza con un carrito de ejemplo mientras no exista el menú.
   await getFirestore().doc('carts/demo-student').set({ userId: 'demo-student', restaurantId: 'rest-burger', lines: exampleProducts.map(product => ({ productId: product.id, quantity: 1 })), version: 1, updatedAt: '2026-10-04T00:00:00Z' });
   await seedRestaurants();
+  await seedMenus();   // RF-06: sin esto los restaurantes quedarían sin ningún producto
   await seedOrders();
 }
 
@@ -95,4 +97,11 @@ export async function seedRestaurants() {
   }
 }
 
-if (process.argv[1]?.endsWith('/seed.ts')) seedDemo().then(() => console.log('Cuatro identidades, diez restaurantes y siete pedidos ficticios preparados en demo-unifood.')).catch(error => { console.error(error.message); process.exitCode = 1; });
+// La ruta usa \ en Windows y / en Linux/macOS. Los valores por defecto son los de los emuladores
+// y solo se aplican al correr `npm run seed`: seedDemo() sigue negándose a tocar un proyecto real.
+if (/[\\/]seed\.ts$/.test(process.argv[1] ?? '')) {
+  process.env.GCLOUD_PROJECT ??= 'demo-unifood';
+  process.env.FIREBASE_AUTH_EMULATOR_HOST ??= '127.0.0.1:9099';
+  process.env.FIRESTORE_EMULATOR_HOST ??= '127.0.0.1:8080';
+  seedDemo().then(() => console.log('Cuatro identidades, diez restaurantes y sus menús ficticios preparados en demo-unifood.')).catch(error => { console.error(error.message); process.exitCode = 1; });
+}
