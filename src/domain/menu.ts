@@ -44,14 +44,15 @@ export const formatCOP = (monto: number) => `$${monto.toString().replace(/\B(?=(
 
 const instante = (valor: unknown) => (typeof valor === 'string' ? Date.parse(valor) : Number.NaN);
 
-// Porcentaje de la promoción si está vigente ahora; 0 si no hay, está vencida, no ha empezado o es inválida.
+// Porcentaje de la promoción si está vigente ahora (inicio inclusivo, fin exclusivo, como RF-24);
+// 0 si no hay, está vencida, no ha empezado o es inválida.
 // Una fecha ilegible anula la promoción: es preferible no ofrecer un descuento que ofrecer uno equivocado.
 export function porcentajeVigente(promocion: unknown, ahora: Date): number {
   if (!promocion || typeof promocion !== 'object') return 0;
   const { porcentaje, desde, hasta } = promocion as Record<string, unknown>;
   if (typeof porcentaje !== 'number' || !Number.isInteger(porcentaje) || porcentaje < 5 || porcentaje > 90) return 0;
-  if (desde !== undefined && !(ahora.getTime() >= instante(desde))) return 0;
-  if (hasta !== undefined && !(ahora.getTime() <= instante(hasta))) return 0;
+  if (desde !== undefined && !(ahora.getTime() >= instante(desde))) return 0;   // el inicio es inclusivo
+  if (hasta !== undefined && !(ahora.getTime() < instante(hasta))) return 0;     // el fin es exclusivo
   return porcentaje;
 }
 

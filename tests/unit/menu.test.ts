@@ -45,6 +45,16 @@ test('la promoción solo aplica si es válida y está vigente', () => {
   expect(aProductoMenu({ id: 'r', data: { ...base, precioCOP: 1999, promocion: { porcentaje: 5 } } }, ahora)?.promocion?.precioFinalCOP).toBe(1899);
 });
 
+test('vigencia de la promoción: el inicio es inclusivo y el fin es exclusivo', () => {
+  const corte = '2026-10-19T15:00:00Z';
+  expect(porcentajeVigente({ porcentaje: 10, desde: corte }, ahora)).toBe(10);                  // empieza justo ahora
+  expect(porcentajeVigente({ porcentaje: 10, desde: '2026-10-19T15:00:01Z' }, ahora)).toBe(0);  // empieza un segundo después
+  expect(porcentajeVigente({ porcentaje: 10, hasta: corte }, ahora)).toBe(0);                   // termina justo ahora
+  expect(porcentajeVigente({ porcentaje: 10, hasta: '2026-10-19T15:00:01Z' }, ahora)).toBe(10); // termina un segundo después
+  expect(porcentajeVigente({ porcentaje: 5 }, ahora)).toBe(5);                                  // sin fechas: vigente
+  expect(porcentajeVigente({ porcentaje: 90 }, ahora)).toBe(90);
+});
+
 test('solo se aceptan fotos https, sin repetir y con un máximo', () => {
   expect(fotosPublicas(['http://x.test/a.png', 'javascript:alert(1)', 5, 'https://x.test/a.png', 'https://x.test/a.png'])).toEqual(['https://x.test/a.png']);
   expect(fotosPublicas(undefined)).toEqual([]);
