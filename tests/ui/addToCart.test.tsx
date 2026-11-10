@@ -1,6 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import AddToCartButton from '../../src/features/cart/AddToCartButton';
+import ProductDetailScreen from '../../src/features/student/menu/ProductDetailScreen';
 import { response } from '../../src/domain/response';
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn(), back: jest.fn(), replace: jest.fn(), canGoBack: () => true }) }));
 
 const doble = { id: 'doble', nombre: 'Doble', precioCOP: 20000, disponible: true };
 const accepted = (input: unknown) => {
@@ -68,4 +70,13 @@ test('sin pasar de 20 unidades y avisando si otro dispositivo cambió el carrito
   await render(<AddToCartButton restaurantId="rest-burger" product={doble} service={offline} />);
   await fireEvent.press(screen.getByRole('button', { name: 'Agregar Doble al carrito' }));
   expect(await screen.findByText('No se agregó el producto. Revisa la conexión y reintenta.')).toBeTruthy();
+});
+
+test('el detalle del producto muestra el botón para agregarlo con su restaurante', async () => {
+  const detail = { restaurante: { id: 'rest-burger', nombre: 'Burger Campus', disponible: true }, producto: { ...doble, descripcion: 'Dos carnes.', fotos: [] } };
+  const menuService = jest.fn().mockResolvedValue(response('OK', 'Producto consultado.', detail));
+  const addToCart = jest.fn(() => null);
+  await render(<ProductDetailScreen restaurantId="rest-burger" productId="doble" service={menuService} addToCart={addToCart} />);
+  expect(await screen.findByText('Dos carnes.')).toBeTruthy();
+  expect(addToCart).toHaveBeenLastCalledWith(detail.producto);
 });

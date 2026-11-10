@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -6,14 +6,15 @@ import { Feedback } from '../../../components/Feedback';
 import { colors } from '../../../constants/theme';
 import { menuRoutes } from './menuRoutes';
 import type { ServiceResponse } from '../../../domain/response';
-import type { DetalleProducto } from '../../../types/Menu';
+import type { DetalleProducto, ProductoDetalle } from '../../../types/Menu';
 import { Price, priceLabel } from './Price';
 import { ProductImage } from './ProductImage';
 
 type Service = (action: 'menu/product', input: unknown) => Promise<ServiceResponse>;
 
 // RF-06 · Detalle de un producto: fotos, descripción, precio, promoción y disponible/agotado.
-export default function ProductDetailScreen({ restaurantId, productId, service }: { restaurantId: string; productId: string; service: Service }) {
+// addToCart: espacio para la acción del carrito (RF-07), que la ruta conecta.
+export default function ProductDetailScreen({ restaurantId, productId, service, addToCart }: { restaurantId: string; productId: string; service: Service; addToCart?: (producto: ProductoDetalle) => ReactNode }) {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const [detail, setDetail] = useState<DetalleProducto | null>(null);
@@ -67,6 +68,7 @@ export default function ProductDetailScreen({ restaurantId, productId, service }
           </View>
           <Text accessibilityRole="header" style={styles.section}>Descripción</Text>
           <Text style={producto.descripcion ? styles.description : styles.muted}>{producto.descripcion || 'Este producto no tiene descripción.'}</Text>
+          {addToCart?.(producto)}
         </>}
     </ScrollView>
   </SafeAreaView>;

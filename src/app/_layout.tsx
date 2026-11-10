@@ -20,6 +20,7 @@ function Navigator() {
     <Stack.Protected guard={identity?.role === 'student'}>
       <Stack.Screen name="student" options={{ headerShown: false }} />
       <Stack.Screen name="orders" />
+      <Stack.Screen name="checkout" options={{ title: 'Método de pago' }} />
       <Stack.Screen name="restaurants" />
       <Stack.Screen name="menu/[restaurantId]" options={{ headerShown: false }} />
       <Stack.Screen name="product/[productId]" options={{ headerShown: false }} />

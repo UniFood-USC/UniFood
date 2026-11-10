@@ -1,20 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import { Feedback } from '../../components/Feedback';
 import { colors } from '../../constants/theme';
-import { cartTotals, emptyCart, formatCOP, lineAmounts, resolveCart, setQuantity, storedCart, type Cart, type Product, type StoredCart } from '../../domain/cart';
+import { cartTotals, emptyCart, formatCOP, lineAmounts, resolveCart, setQuantity, storedCart, toProduct, type Cart, type MenuProduct, type StoredCart } from '../../domain/cart';
 import type { ServiceResponse } from '../../domain/response';
-import { exampleProducts } from './exampleProducts';
 
-type Service = (action: 'cart/get' | 'cart/save', input: unknown) => Promise<ServiceResponse>;
+type Service = (action: 'cart/get' | 'cart/save' | 'menu/list', input: unknown) => Promise<ServiceResponse>;
 type Stored = { cart: StoredCart; version: number };
 const unsaved = 'No se guardó el último cambio del carrito. Revisa la conexión y reintenta.';
+class MenuUnavailable extends Error {}
 const changedElsewhere = 'Tu carrito cambió en otro dispositivo. Revisa los cambios antes de continuar.';
 
-export default function CartScreen({ service, products = exampleProducts }: { service: Service; products?: Product[] }) {
+export default function CartScreen({ service }: { service: Service }) {
+  const router = useRouter();
   const [cart, setCart] = useState<Cart>(emptyCart);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -27,14 +28,26 @@ export default function CartScreen({ service, products = exampleProducts }: { se
   const queue = useRef(Promise.resolve());
   const round = useRef(0);
   const pending = useRef(0);
-  const show = useCallback((stored: Stored) => { version.current = stored.version; setCart(resolveCart(stored.cart, products)); }, [products]);
+  // Nombre, precio y promoción salen siempre del menú vigente del restaurante del carrito.
+  // Si el menú no responde no se muestra un carrito vacío, que al editarse borraría el guardado.
+  const show = useCallback(async (stored: Stored) => {
+    let products: ReturnType<typeof toProduct>[] = [];
+    if (stored.cart.restaurantId) {
+      const menu = await service('menu/list', { restaurantId: stored.cart.restaurantId });
+      if (menu.codigo !== 'OK') throw new MenuUnavailable(menu.mensaje);
+      products = (menu.datos as { productos: MenuProduct[] }).productos.map(product => toProduct(stored.cart.restaurantId!, product));
+    }
+    if (!mounted.current) return;
+    version.current = stored.version;
+    setCart(resolveCart(stored.cart, products));
+  }, [service]);
   // Se consulta al entrar y cada vez que se vuelve a la pestaña, salvo con cambios aún por guardar.
-  const load = useCallback(() => service('cart/get', {}).then(result => {
+  const load = useCallback(() => service('cart/get', {}).then(async result => {
     if (!mounted.current || pending.current) return;
-    if (result.codigo === 'OK') show(result.datos as Stored);
+    if (result.codigo === 'OK') await show(result.datos as Stored);
     else setLoadError(result.mensaje);
-  }).catch(() => {
-    if (mounted.current) setLoadError('No pudimos consultar tu carrito. Revisa la conexión y reintenta.');
+  }).catch((error: Error) => {
+    if (mounted.current) setLoadError(error instanceof MenuUnavailable ? error.message : 'No pudimos consultar tu carrito. Revisa la conexión y reintenta.');
   }).finally(() => { if (mounted.current) setLoading(false); }), [service, show]);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useFocusEffect(useCallback(() => { void load(); }, [load]));
@@ -46,12 +59,13 @@ export default function CartScreen({ service, products = exampleProducts }: { se
       const result = await service('cart/save', { ...storedCart(next), version: version.current });
       if (!mounted.current) return;
       if (result.codigo === 'OK') { version.current = (result.datos as Stored).version; setSaveError(''); setNotice(''); }
-      else if (result.codigo === 'CONFLICTO_VERSION') { round.current += 1; show(result.datos as Stored); setSaveError(''); setNotice(changedElsewhere); }
+      else if (result.codigo === 'CONFLICTO_VERSION') { round.current += 1; await show(result.datos as Stored); setSaveError(''); setNotice(changedElsewhere); }
       else setSaveError(unsaved);
     }).catch(() => { if (mounted.current) setSaveError(unsaved); }).finally(() => { pending.current -= 1; });
   }
   function change(next: Cart) { setCart(next); save(next); }
   const totals = cartTotals(cart.lines);
+  const canContinue = cart.lines.length > 0 && !saveError;
   if (loading || loadError) return <SafeAreaView edges={['top']} style={styles.screen}>
     <View style={styles.content}>
       <Text accessibilityRole="header" style={styles.title}>Tu carrito</Text>
@@ -96,10 +110,12 @@ export default function CartScreen({ service, products = exampleProducts }: { se
         <View style={styles.divider} />
         <Row label="Total" value={formatCOP(totals.totalCOP)} strong />
       </View>
-      <Pressable accessibilityRole="button" accessibilityLabel="Continuar" disabled accessibilityState={{ disabled: true }} style={[styles.button, styles.dimmed]}>
+      {/* Continuar exige un carrito con productos y guardado: lo que se cobra es lo guardado. */}
+      <Pressable accessibilityRole="button" accessibilityLabel="Continuar" disabled={!canContinue} accessibilityState={{ disabled: !canContinue }}
+        onPress={() => router.push('/checkout')} style={[styles.button, !canContinue && styles.dimmed]}>
         <Text style={styles.buttonText}>Continuar</Text>
       </Pressable>
-      <Text style={styles.hint}>{cart.lines.length ? 'El pago estará disponible próximamente.' : 'Agrega productos para continuar.'}</Text>
+      {!cart.lines.length && <Text style={styles.hint}>Agrega productos para continuar.</Text>}
     </ScrollView>
   </SafeAreaView>;
 }
