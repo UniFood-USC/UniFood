@@ -16,7 +16,8 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "co.edu.usc.unifood"
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -32,6 +33,14 @@
         {
           "color": "#C8440A",
           "defaultChannel": "avisos"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
         }
       ]
     ],
