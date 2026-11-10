@@ -1,5 +1,6 @@
 import { adminServices } from './firebase';
 import { checkedIdentity } from './identity';
+import { materializeNotices } from './notifications';
 import { applyChange, type Actor, type Change, type ChangeResult } from '../../src/services/orders/changeOrder';
 import { response } from '../../src/domain/response';
 import type { Order } from '../../src/types/domain';
@@ -142,9 +143,23 @@ export async function changeOrder(authorization: string | undefined, input: unkn
     const changeResult = applyChange(current, input.change as Change, actor, Number(input.expectedVersion));
     if (changeResult.ok) {
       const { id: _id, ...updated } = changeResult.order;
-      tx.set(ref, updated);
+      // merge conserva los datos de la compra (líneas, clave del intento) que Order no describe.
+      tx.set(ref, updated, { merge: true });
     }
     return changeResult;
   });
+  if (result.ok) await noticeStudent(result.order, input.change as Change);
   return response('OK', result.ok ? 'Pedido actualizado.' : result.message, { result });
+}
+
+// RF-12 · Avisos al estudiante tras un cambio confirmado: listo, cancelado y reembolso simulado.
+// Cada evento tiene un identificador fijo por pedido, así repetir el cambio no duplica avisos.
+async function noticeStudent(order: Order, change: Change) {
+  const events: [string, 'order_ready' | 'order_cancelled' | 'refund'][] = [];
+  if (change.type === 'advance' && order.status === 'ready') events.push([`ready-${order.id}`, 'order_ready']);
+  if (change.type === 'cancel') events.push([`cancelled-${order.id}`, 'order_cancelled']);
+  if (change.type === 'cancel' && order.refund) events.push([`refund-${order.id}`, 'refund']);
+  for (const [id, kind] of events) {
+    await materializeNotices({ id, kind, orderId: order.id, orderNumber: order.id, recipients: [order.studentId], occurredAt: order.updatedAt });
+  }
 }
