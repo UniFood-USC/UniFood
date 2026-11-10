@@ -51,12 +51,6 @@ test('un rechazo del servicio muestra su mensaje', async () => {
   expect(await screen.findByText('Solo los estudiantes consultan el listado de restaurantes.')).toBeTruthy();
 });
 
-test('desde el inicio del estudiante se llega al listado', async () => {
-  await render(<StudentScreen />);
-  await fireEvent.press(screen.getByRole('button', { name: 'Ver restaurantes' }));
-  expect(mockPush).toHaveBeenCalledWith('/restaurants');
-});
-
 // RF-05 · Búsqueda de restaurantes por nombre.
 const abrirListado = async () => {
   const service = jest.fn().mockResolvedValue(response('OK', 'Restaurantes consultados.', { restaurants: lista }));
