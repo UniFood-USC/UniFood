@@ -22,7 +22,8 @@ export interface Order {
   paymentMethod: PaymentMethod;
   total: number;                             // total del pedido (COP)
   paid: boolean;                             // pago registrado
-  version: number;                           // sube con cada cambio
+  version: number;    
+  restaurantName?: string;                   // lo agrega el servidor; si falta, se busca en la lista de restaurantes                       // sube con cada cambio
   updatedBy?: { role: UserRole; id: string };
   refund?: { amount: number; at: string };   // reembolso simulado, una sola vez
   scheduledFor?: string | null;              // ISO; pedido programado
