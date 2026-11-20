@@ -64,7 +64,8 @@ export default function StudentScreen() {
       {error ? <Feedback state="error" message={error} onRetry={retry} />
         : !restaurants ? <Feedback state="loading" message="Consultando restaurantes…" />
         : !restaurants.length ? <Feedback state="empty" message="No hay restaurantes para mostrar." />
-        : restaurants.slice(0, 3).map(restaurant => <RestaurantCard key={restaurant.id} restaurant={restaurant} />)}
+        : restaurants.slice(0, 3).map(restaurant => <RestaurantCard key={restaurant.id} restaurant={restaurant}
+          onPress={() => router.push({ pathname: '/student/restaurant/[id]', params: { id: restaurant.id } })} />)}
     </ScrollView>
   </SafeAreaView>;
 }

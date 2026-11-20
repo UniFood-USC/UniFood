@@ -32,6 +32,19 @@ export async function saveCart(authorization: string | undefined, input: unknown
   let change;
   try { change = validateCartSave(input); }
   catch (error) { return response('VALIDACION', (error as Error).message); }
+  if (change.cart.restaurantId) {
+    const { db } = adminServices();
+    const restaurant = await db.doc(`restaurantes/${change.cart.restaurantId}`).get();
+    if (!restaurant.exists || restaurant.data()?.estado !== 'aprobado' || restaurant.data()?.activo !== true) {
+      return response('VALIDACION', 'El restaurante no está disponible.');
+    }
+    const productIds = change.cart.lines.map(line => line.productId);
+    const snapshots = await Promise.all(productIds.map(id => db.doc(`menus/${change.cart.restaurantId}/products/${id}`).get()));
+    if (snapshots.some((snapshot, index) =>
+      !snapshot.exists || snapshot.data()?.disponible !== true || snapshot.id !== productIds[index])) {
+      return response('VALIDACION', 'Hay un producto agotado o que ya no pertenece al menú.');
+    }
+  }
   const { db } = adminServices();
   return db.runTransaction(async tx => {
     const stored = current((await tx.get(ref)).data());

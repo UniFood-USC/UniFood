@@ -55,7 +55,8 @@ export default function RestaurantsScreen({ service }: { service: Service }) {
           <Text accessibilityLiveRegion="polite" style={styles.count}>
             {restaurants.length === 1 ? '1 restaurante' : `${restaurants.length} restaurantes`} en el campus · {open} {open === 1 ? 'abierto' : 'abiertos'} ahora
           </Text>
-          {restaurants.map(restaurant => <RestaurantCard key={restaurant.id} restaurant={restaurant} />)}
+          {restaurants.map(restaurant => <RestaurantCard key={restaurant.id} restaurant={restaurant}
+            onPress={() => router.push({ pathname: '/student/restaurant/[id]', params: { id: restaurant.id } })} />)}
         </>}
     </ScrollView>
   </SafeAreaView>;

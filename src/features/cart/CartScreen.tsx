@@ -5,16 +5,15 @@ import { useFocusEffect } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import { Feedback } from '../../components/Feedback';
 import { colors } from '../../constants/theme';
-import { cartTotals, emptyCart, formatCOP, lineAmounts, resolveCart, setQuantity, storedCart, type Cart, type Product, type StoredCart } from '../../domain/cart';
+import { cartTotals, emptyCart, formatCOP, fromMenuProduct, lineAmounts, resolveCart, setQuantity, storedCart, type Cart, type MenuProduct, type Product, type StoredCart } from '../../domain/cart';
 import type { ServiceResponse } from '../../domain/response';
-import { exampleProducts } from './exampleProducts';
 
-type Service = (action: 'cart/get' | 'cart/save', input: unknown) => Promise<ServiceResponse>;
+type Service = (action: 'cart/get' | 'cart/save' | 'menu/list', input: unknown) => Promise<ServiceResponse>;
 type Stored = { cart: StoredCart; version: number };
 const unsaved = 'No se guardó el último cambio del carrito. Revisa la conexión y reintenta.';
 const changedElsewhere = 'Tu carrito cambió en otro dispositivo. Revisa los cambios antes de continuar.';
 
-export default function CartScreen({ service, products = exampleProducts }: { service: Service; products?: Product[] }) {
+export default function CartScreen({ service, products }: { service: Service; products?: Product[] }) {
   const [cart, setCart] = useState<Cart>(emptyCart);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -27,7 +26,21 @@ export default function CartScreen({ service, products = exampleProducts }: { se
   const queue = useRef(Promise.resolve());
   const round = useRef(0);
   const pending = useRef(0);
-  const show = useCallback((stored: Stored) => { version.current = stored.version; setCart(resolveCart(stored.cart, products)); }, [products]);
+  const show = useCallback(async (stored: Stored) => {
+    version.current = stored.version;
+    if (!stored.cart.restaurantId) { setCart(emptyCart); return; }
+    if (products) { setCart(resolveCart(stored.cart, products)); return; }
+    const menu = await service('menu/list', { restaurantId: stored.cart.restaurantId });
+    if (!mounted.current) return;
+    if (menu.codigo === 'OK') {
+      const products = ((menu.datos as { products: MenuProduct[] }).products ?? [])
+        .map(product => fromMenuProduct(stored.cart.restaurantId!, product));
+      setCart(resolveCart(stored.cart, products));
+    } else {
+      setCart(emptyCart);
+      setLoadError(menu.mensaje);
+    }
+  }, [service, products]);
   // Se consulta al entrar y cada vez que se vuelve a la pestaña, salvo con cambios aún por guardar.
   const load = useCallback(() => service('cart/get', {}).then(result => {
     if (!mounted.current || pending.current) return;
@@ -62,7 +75,6 @@ export default function CartScreen({ service, products = exampleProducts }: { se
   return <SafeAreaView edges={['top']} style={styles.screen}>
     <ScrollView contentContainerStyle={styles.content}>
       <Text accessibilityRole="header" style={styles.title}>Tu carrito</Text>
-      <View style={styles.notice}><Text style={styles.noticeText}>Productos de ejemplo: los reales llegarán con el menú de cada restaurante.</Text></View>
       {!!notice && <View style={styles.notice}><Text accessibilityRole="alert" style={styles.noticeText}>{notice}</Text></View>}
       {!!saveError && <Feedback state="error" message={saveError} onRetry={() => save(cart)} />}
       {!cart.lines.length ? <Feedback state="empty" message="Tu carrito está vacío." /> : cart.lines.map(line => {

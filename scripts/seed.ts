@@ -3,7 +3,6 @@ import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { emailKey } from '../functions/src/identity';
 import { readAdminControl } from '../functions/src/adminControl';
-import { exampleProducts } from '../src/features/cart/exampleProducts';
 import type { Order } from '../src/types/domain';
 
 export async function seedDemo() {
@@ -31,10 +30,48 @@ export async function seedDemo() {
       if (control) tx.set(control.ref, { activeCount: control.activeCount + (old?.role === 'admin' && old.state === 'active' ? 0 : 1), version: control.version + 1 });
     });
   }
-  // El estudiante demo empieza con un carrito de ejemplo mientras no exista el menú.
-  await getFirestore().doc('carts/demo-student').set({ userId: 'demo-student', restaurantId: 'rest-burger', lines: exampleProducts.map(product => ({ productId: product.id, quantity: 1 })), version: 1, updatedAt: '2026-10-04T00:00:00Z' });
+  // El carrito demo comienza vacío. Los productos se cargan únicamente desde el menú real.
+  await getFirestore().doc('carts/demo-student').set({ userId: 'demo-student', restaurantId: null, lines: [], version: 1, updatedAt: '2026-10-04T00:00:00Z' });
   await seedRestaurants();
+  await seedMenus();
   await seedOrders();
+}
+
+export async function seedMenus() {
+  const db = getFirestore();
+  const menus: Record<string, Array<{ id: string; nombre: string; precioCOP: number; disponible: boolean; promocion?: { porcentaje: number; precioFinalCOP: number } }>> = {
+    'rest-burger': [
+      { id: 'doble', nombre: 'Doble', precioCOP: 20000, disponible: true, promocion: { porcentaje: 15, precioFinalCOP: 17000 } },
+      { id: 'papas', nombre: 'Papas', precioCOP: 6000, disponible: true },
+      { id: 'gaseosa', nombre: 'Gaseosa', precioCOP: 4000, disponible: true },
+      { id: 'clasica', nombre: 'Clásica', precioCOP: 16000, disponible: true },
+    ],
+    'rest-pizza': [
+      { id: 'pizza-carnes', nombre: 'Pizza carnes', precioCOP: 18000, disponible: true },
+      { id: 'pizza-hawaiana', nombre: 'Pizza hawaiana', precioCOP: 17000, disponible: true },
+      { id: 'pizza-vegetariana', nombre: 'Pizza vegetariana', precioCOP: 16000, disponible: false },
+    ],
+    'rest-sazon': [
+      { id: 'almuerzo-corriente', nombre: 'Almuerzo corriente', precioCOP: 14000, disponible: true },
+      { id: 'sopa-casa', nombre: 'Sopa de la casa', precioCOP: 7000, disponible: true },
+    ],
+    'rest-cafe': [
+      { id: 'cafe', nombre: 'Café', precioCOP: 4500, disponible: true },
+      { id: 'sandwich', nombre: 'Sándwich', precioCOP: 8000, disponible: true },
+      { id: 'tostada', nombre: 'Tostada', precioCOP: 6000, disponible: true },
+    ],
+    'rest-fruta': [
+      { id: 'ensalada-frutas', nombre: 'Ensalada de frutas', precioCOP: 9000, disponible: true },
+      { id: 'jugo-natural', nombre: 'Jugo natural', precioCOP: 6000, disponible: true },
+    ],
+    'rest-arepas': [
+      { id: 'arepa-carne', nombre: 'Arepa de carne', precioCOP: 12000, disponible: true },
+      { id: 'arepa-pollo', nombre: 'Arepa de pollo', precioCOP: 11000, disponible: true },
+    ],
+  };
+  await Promise.all(Object.entries(menus).flatMap(([restaurantId, products]) =>
+    products.map(product => db.doc(`menus/${restaurantId}/products/${product.id}`).set(product)),
+  ));
 }
 
 // Pedidos de ejemplo guardados (colección orders, con la forma de Order del módulo de pedidos)

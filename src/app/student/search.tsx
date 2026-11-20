@@ -1,5 +1,6 @@
-import { ComingSoon } from '../../components/ComingSoon';
+import SearchScreen from '../../features/student/restaurants/SearchScreen';
+import { callService } from '../../services/client';
 
 export default function Route() {
-  return <ComingSoon description="Aquí podrás buscar restaurantes y platos del campus." />;
+  return <SearchScreen service={callService} />;
 }
