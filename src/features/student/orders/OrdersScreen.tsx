@@ -4,9 +4,13 @@ import { useRouter } from 'expo-router';
 import { colors } from '../../../constants/theme';
 import { routes } from '../../../constants/routes';
 import { Order } from '../../../types/domain';
-import { MOCK_STUDENT_ID, mockOrders, restaurantName } from '../../../services/orders/orderRepository';
+import { canRateOrder } from '../../../domain/ratings';
+import { restaurantName } from '../../../services/orders/orderRepository';
+import { serverOrderRepository } from '../../../services/orders/serverOrderRepository';
 import { isTerminal, statusLabel } from '../../../services/orders/statusFlow';
+import { OrderRatingEditor } from './OrderRatingEditor';
 import { useOrders } from '../../../services/orders/useOrders';
+import { useSession } from '../../identity/SessionProvider';
 
 type Tab = 'active' | 'history';
 
@@ -25,9 +29,12 @@ function formatWhen(iso: string) {
 
 export default function OrdersScreen() {
   const router = useRouter();
+  const { identity } = useSession();
   const goBack = () => router.back();
   const [tab, setTab] = useState<Tab>('active');
-  const { orders, error, loading } = useOrders(mockOrders.repo, { studentId: MOCK_STUDENT_ID });
+  const { orders, error, loading } = useOrders(serverOrderRepository, {
+    ...(identity?.id ? { studentId: identity.id } : {}),
+  });
 
   const visible = [...orders]
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
@@ -70,14 +77,25 @@ export default function OrdersScreen() {
         <Empty text={tab === 'active' ? 'No tienes pedidos activos.' : 'Aún no tienes pedidos en tu historial.'} />
       ) : (
         visible.map((o) => (
-          <OrderCard key={o.id} order={o} onOpen={() => router.push(routes.orderTracking(o.id))} />
+          <OrderCard
+            key={o.id}
+            order={o}
+            studentId={identity?.id ?? ''}
+            canRate={tab === 'history' && !!identity?.id && canRateOrder(o, identity.id)}
+            onOpen={() => router.push(routes.orderTracking(o.id))}
+          />
         ))
       )}
     </ScrollView>
   );
 }
 
-function OrderCard({ order, onOpen }: { order: Order; onOpen: () => void }) {
+function OrderCard({ order, studentId, canRate, onOpen }: {
+  order: Order;
+  studentId: string;
+  canRate: boolean;
+  onOpen: () => void;
+}) {
   const name = restaurantName(order.restaurantId);
   const scheduled = order.status === 'received' && !!order.scheduledFor;
   const when = scheduled ? `Programado · ${formatWhen(order.scheduledFor!)}` : formatWhen(order.createdAt);
@@ -106,6 +124,13 @@ function OrderCard({ order, onOpen }: { order: Order; onOpen: () => void }) {
       >
         <Text style={styles.detailBtnText}>Ver detalles</Text>
       </Pressable>
+      {canRate && (
+        <OrderRatingEditor
+          order={order}
+          studentId={studentId}
+          authorName="Estudiante"
+        />
+      )}
     </View>
   );
 }

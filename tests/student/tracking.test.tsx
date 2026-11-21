@@ -1,7 +1,9 @@
 import { act, renderHook } from '@testing-library/react-native';
 import { useOrderTracking } from '../../src/features/student/tracking/useOrderTracking';
-import type { OrderRepository } from '../../src/features/student/tracking/orderRepository';
+import type { OrderRepository as FullRepository } from '../../src/services/orders/orderRepository';
 import type { Order } from '../../src/types/domain';
+
+type OrderRepository = Pick<FullRepository, 'subscribe'>;
 
 function controlledRepository() {
   const subscriptions: { change: (order: Order | null) => void; error: (error: Error) => void; stop: jest.Mock }[] = [];

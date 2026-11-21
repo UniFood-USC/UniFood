@@ -57,9 +57,11 @@ export function porcentajeVigente(promocion: unknown, ahora: Date): number {
 }
 
 // Solo fotos https (mismo criterio que el logo del restaurante), sin repetidas y con un máximo.
+// Única excepción: las que sirve el emulador local (http://127.0.0.1 o localhost), para poder probar RF-16 sin nube.
+const fotoLocal = /^http:\/\/(127\.0\.0\.1|localhost):\d{2,5}\//;
 export function fotosPublicas(fotos: unknown): string[] {
   if (!Array.isArray(fotos)) return [];
-  const validas = fotos.filter((foto): foto is string => typeof foto === 'string' && foto.startsWith('https://'));
+  const validas = fotos.filter((foto): foto is string => typeof foto === 'string' && (foto.startsWith('https://') || fotoLocal.test(foto)));
   return [...new Set(validas)].slice(0, MAX_FOTOS);
 }
 

@@ -4,7 +4,8 @@ import { colors } from '../constants/theme';
 import { routes } from '../constants/routes';
 import { Order } from '../types/domain';
 import { Actor } from '../services/orders/changeOrder';
-import { OrderFilter, mockOrders, restaurantName } from '../services/orders/orderRepository';
+import { OrderFilter, restaurantName } from '../services/orders/orderRepository';
+import { serverOrderRepository } from '../services/orders/serverOrderRepository';
 import { isTerminal, statusLabel } from '../services/orders/statusFlow';
 import { useOrders } from '../services/orders/useOrders';
 import { OrderActions } from './OrderActions';
@@ -16,7 +17,7 @@ type Props = { title: string; filter: OrderFilter; actor: Actor; fallback: '/res
 
 export function StaffOrdersView({ title, filter, actor, fallback, showRestaurant }: Props) {
   const router = useRouter();
-  const { orders, loading } = useOrders(mockOrders.repo, filter);
+  const { orders, error, loading } = useOrders(serverOrderRepository, filter);
   const goBack = () => (router.canGoBack() ? router.back() : router.replace(fallback));
 
   const sorted = [...orders].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -33,7 +34,9 @@ export function StaffOrdersView({ title, filter, actor, fallback, showRestaurant
         <View style={styles.back} />
       </View>
 
-      {loading ? <ActivityIndicator color={colors.primary} accessibilityLabel="Cargando pedidos" /> : (
+      {loading ? <ActivityIndicator color={colors.primary} accessibilityLabel="Cargando pedidos" /> : error ? (
+        <Text accessibilityRole="alert" style={styles.muted}>No pudimos cargar los pedidos. Intenta de nuevo más tarde.</Text>
+      ) : (
         <>
           <Text accessibilityRole="header" style={styles.section}>En curso ({active.length})</Text>
           {active.length === 0 && <Text style={styles.muted}>No hay pedidos en curso.</Text>}

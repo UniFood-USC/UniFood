@@ -1,24 +1,69 @@
 import { initializeApp } from 'firebase-admin/app';
-import { onRequest } from 'firebase-functions/v2/https';
+import { onRequest, type Request } from 'firebase-functions/v2/https';
 import { checkedIdentity, registerStudent, createAdministrativeAccount, ownProfile } from './identity';
 import { response, type ResultCode } from '../../src/domain/response';
-import { listUsers, updateUserContact } from './users';
+import { changeUserState, deleteAccount, listUsers, updateUserContact } from './users';
 import { completeRecovery, requestRecovery } from './recovery';
 import { listRestaurants } from './restaurants';
 import { readMenu, readProduct } from './menu';
+import { changeOrder, getOrder, listOrders } from './orders';
+import { readCart, saveCart } from './cart';
+import { listNotices, registerDevice, unregisterDevice } from './notifications';
+import { listOwnProducts, readPhoto, removeProduct, saveProduct, uploadPhoto } from './productManagement';
 
 initializeApp();
+
+// Dirección pública de este servicio (para armar la URL de las fotos de producto).
+// En el emulador la ruta lleva /{proyecto}/{región}/api; en producción el servicio cuelga de la raíz de su host.
+const publicBaseUrl = (request: Request) => {
+  const host = request.get('x-forwarded-host') ?? request.get('host') ?? '';
+  return process.env.FUNCTIONS_EMULATOR === 'true'
+    ? `http://${host}/${process.env.GCLOUD_PROJECT}/us-central1/api`
+    : `https://${host}`;
+};
+
 export const api = onRequest({ cors: true, maxInstances: 2 }, async (request, reply) => {
+  // RF-16 · Las fotos de producto se leen con GET público: la etiqueta <img> no puede enviar sesión.
+  if (request.method === 'GET' && request.path.startsWith('/photos/')) {
+    try {
+      const foto = await readPhoto(request.path);
+      if (!foto) { reply.status(404).json(response('VALIDACION', 'Foto no disponible.')); return; }
+      reply.set('Content-Type', foto.formato).set('Cache-Control', 'public, max-age=3600').set('X-Content-Type-Options', 'nosniff').send(foto.contenido);
+    } catch { reply.status(503).json(response('SERVICIO_NO_DISPONIBLE', 'Servicio no disponible.')); }
+    return;
+  }
   if (request.method !== 'POST') { reply.status(405).json(response('VALIDACION', 'Método no permitido.')); return; }
   if (request.path === '/register') { reply.json(await registerStudent(request.body)); return; }
   if (request.path === '/recovery/request') { reply.json(await requestRecovery(request.body)); return; }
   if (request.path === '/recovery/complete') { reply.json(await completeRecovery(request.body)); return; }
-  if (['/identity', '/profile', '/users/create', '/users/list', '/users/update', '/restaurants/list', '/menu/list', '/menu/product'].includes(request.path)) {
+  if ([
+    '/identity', '/profile',
+    '/users/create', '/users/list', '/users/update', '/users/state', '/users/delete',
+    '/restaurants/list', '/menu/list', '/menu/product',
+    '/products/list', '/products/save', '/products/remove', '/products/photo',
+    '/orders/list', '/orders/get', '/orders/change',
+    '/cart/get', '/cart/save',
+    '/notifications/list', '/devices/register', '/devices/unregister',
+  ].includes(request.path)) {
     try {
       const result = request.path === '/restaurants/list' ? await listRestaurants(request.headers.authorization)
         : request.path === '/menu/list' ? await readMenu(request.headers.authorization, request.body)
         : request.path === '/menu/product' ? await readProduct(request.headers.authorization, request.body)
+        : request.path === '/products/list' ? await listOwnProducts(request.headers.authorization)
+        : request.path === '/products/save' ? await saveProduct(request.headers.authorization, request.body, { baseUrl: publicBaseUrl(request) })
+        : request.path === '/products/photo' ? await uploadPhoto(request.headers.authorization, request.body, { baseUrl: publicBaseUrl(request) })
+        : request.path === '/products/remove' ? await removeProduct(request.headers.authorization, request.body)
+        : request.path === '/orders/list' ? await listOrders(request.headers.authorization, request.body)
+        : request.path === '/orders/get' ? await getOrder(request.headers.authorization, request.body)
+        : request.path === '/orders/change' ? await changeOrder(request.headers.authorization, request.body)
+        : request.path === '/cart/get' ? await readCart(request.headers.authorization)
+        : request.path === '/cart/save' ? await saveCart(request.headers.authorization, request.body)
+        : request.path === '/notifications/list' ? await listNotices(request.headers.authorization)
+        : request.path === '/devices/register' ? await registerDevice(request.headers.authorization, request.body)
+        : request.path === '/devices/unregister' ? await unregisterDevice(request.headers.authorization, request.body)
         : request.path === '/users/list' ? await listUsers(request.headers.authorization)
+        : request.path === '/users/state' ? await changeUserState(request.headers.authorization, request.body)
+        : request.path === '/users/delete' ? await deleteAccount(request.headers.authorization, request.body)
         : request.path === '/users/update' ? await updateUserContact(request.headers.authorization, request.body)
         : request.path === '/users/create'
         ? await createAdministrativeAccount(request.headers.authorization, request.body)

@@ -5,6 +5,7 @@ export const routes = {
   home: '/',
   student: '/student',
   restaurant: '/restaurant',
+  restaurantSales: '/restaurant-sales',
   admin: '/admin',
   orders: '/orders',
 

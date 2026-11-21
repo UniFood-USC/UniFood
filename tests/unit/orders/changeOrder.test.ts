@@ -1,5 +1,5 @@
-import { Order } from '../../src/types/domain';
-import { Actor, applyChange } from '../../src/services/orders/changeOrder';
+import { Order } from '../../../src/types/domain';
+import { Actor, applyChange } from '../../../src/services/orders/changeOrder';
 
 const restaurant: Actor = { role: 'restaurant', id: 'r1', restaurantId: 'rest-1' };
 const student: Actor = { role: 'student', id: 's1' };
@@ -15,7 +15,7 @@ describe('recogida: secuencia y pago', () => {
   it('avanza sin saltos, sube la versión y no pasa de recogido', () => {
     let o = make();
     for (const [status, version] of [['preparing', 1], ['ready', 2], ['collected', 3]] as const) {
-      const r = applyChange(o, { type: 'advance' }, restaurant, o.version);
+      const r = applyChange(o, { type: 'advance', estimateMinutes: 20 }, restaurant, o.version);
       expect(r.ok).toBe(true);
       if (r.ok) { expect(r.order.status).toBe(status); expect(r.order.version).toBe(version); o = r.order; }
     }
@@ -29,9 +29,9 @@ describe('recogida: secuencia y pago', () => {
   });
 
   it('solo avanza el restaurante dueño del pedido', () => {
-    expect(applyChange(make(), { type: 'advance' }, student, 0).ok).toBe(false);
-    expect(applyChange(make(), { type: 'advance' }, admin, 0).ok).toBe(false);
-    expect(applyChange(make(), { type: 'advance' }, { ...restaurant, restaurantId: 'rest-2' }, 0).ok).toBe(false);
+    expect(applyChange(make(), { type: 'advance', estimateMinutes: 20 }, student, 0).ok).toBe(false);
+    expect(applyChange(make(), { type: 'advance', estimateMinutes: 20 }, admin, 0).ok).toBe(false);
+    expect(applyChange(make(), { type: 'advance', estimateMinutes: 20 }, { ...restaurant, restaurantId: 'rest-2' }, 0).ok).toBe(false);
   });
 });
 
@@ -60,8 +60,7 @@ describe('cancelación', () => {
     if (!first.ok) throw new Error('debía cancelar');
     expect(first.order.refund?.amount).toBe(30000);
     const again = applyChange(first.order, { type: 'cancel', reason: 'x' }, admin, first.order.version);
-    expect(again.ok).toBe(false);
-    expect(first.order.refund).toEqual(first.order.refund);
+    expect(again.ok === false && again.error).toBe('terminal');
   });
   it('no hay reembolso si no estaba pagado', () => {
     const r = applyChange(make({ paid: false }), { type: 'cancel' }, student, 0);
@@ -74,13 +73,13 @@ describe('carrera cancelación vs preparación (misma versión)', () => {
     const base = make();
     const cancel = applyChange(base, { type: 'cancel' }, student, 0);
     if (!cancel.ok) throw new Error('debía cancelar');
-    const prep = applyChange(cancel.order, { type: 'advance' }, restaurant, 0);
+    const prep = applyChange(cancel.order, { type: 'advance', estimateMinutes: 20 }, restaurant, 0);
     expect(prep.ok === false && prep.error).toBe('stale_version');
     expect(prep.ok === false && prep.current?.status).toBe('cancelled');
   });
   it('si inicia primero la preparación, la cancelación del estudiante se rechaza', () => {
     const base = make();
-    const prep = applyChange(base, { type: 'advance' }, restaurant, 0);
+    const prep = applyChange(base, { type: 'advance', estimateMinutes: 20 }, restaurant, 0);
     if (!prep.ok) throw new Error('debía avanzar');
     const cancel = applyChange(prep.order, { type: 'cancel' }, student, 0);
     expect(cancel.ok === false && cancel.error).toBe('stale_version');
