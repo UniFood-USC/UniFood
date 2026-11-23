@@ -65,10 +65,9 @@ export const api = onRequest({ cors: true, maxInstances: 2 }, async (request, re
         : request.path === '/users/state' ? await changeUserState(request.headers.authorization, request.body)
         : request.path === '/users/delete' ? await deleteAccount(request.headers.authorization, request.body)
         : request.path === '/users/update' ? await updateUserContact(request.headers.authorization, request.body)
-        : request.path === '/users/create'
-        ? await createAdministrativeAccount(request.headers.authorization, request.body)
+        : request.path === '/users/create' ? await createAdministrativeAccount(request.headers.authorization, request.body)
         : request.path === '/profile' ? await ownProfile(request.headers.authorization, request.body)
-          : response('OK', 'Identidad comprobada.', await checkedIdentity(request.headers.authorization, request.body));
+        : response('OK', 'Identidad comprobada.', await checkedIdentity(request.headers.authorization, request.body));
       reply.json(result);
     }
     catch (error) {

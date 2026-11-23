@@ -159,8 +159,11 @@ test('RF-16 · criterio 9: fotos JPG o PNG de hasta 5 MB, entre 1 y 5 por produc
   // Hasta 5 MB: exactamente 5 MB entra, un byte más no.
   const relleno = (bytes: number) => Buffer.concat([PNG, Buffer.alloc(bytes - PNG.length)]);
   const subirGrande = (bytes: number) => uploadPhoto(`Bearer ${burger}`, { formato: 'image/png', datos: relleno(bytes).toString('base64') });
-  assert.equal((await subirGrande(5 * 1024 * 1024)).codigo, 'OK');
-  assert.equal((await subirGrande(5 * 1024 * 1024 + 1)).codigo, 'VALIDACION');
+    const subirGrande = (bytes: number) => uploadPhoto(`Bearer ${burger}`, { formato: 'image/png', datos: relleno(bytes).toString('base64') });
+  const exacto = await subirGrande(5 * 1024 * 1024);
+  assert.equal(exacto?.codigo, 'OK');
+  const excedido = await subirGrande(5 * 1024 * 1024 + 1);
+  assert.equal(excedido?.codigo, 'VALIDACION');
   // Una dirección que no fue subida por el restaurante no se acepta.
   const inventada = await post('products/save', nuevo({ nombre: 'Foto inventada', fotos: ['https://evil.test/a.jpg'] }), burger);
   assert.equal(inventada.codigo, 'VALIDACION'); assert.ok(inventada.datos.errores.fotos);
