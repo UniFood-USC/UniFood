@@ -1,5 +1,10 @@
-import { ComingSoon } from '../../components/ComingSoon';
+import { StaffOrdersView } from '../../components/StaffOrdersView';
+import { useSession } from '../../features/identity/SessionProvider';
 
+// Pedidos del restaurante (vista de pedidos de Nahia, RF-17 y RF-18).
 export default function Route() {
-  return <ComingSoon description="Aquí recibirás los pedidos nuevos y actualizarás su estado hasta la entrega." />;
+  const { identity } = useSession();
+  const restaurantId = identity?.restaurantId;
+  return <StaffOrdersView title="Pedidos" filter={{ restaurantId }}
+    actor={{ id: identity?.id ?? '', role: 'restaurant', ...(restaurantId ? { restaurantId } : {}) }} fallback="/restaurant" />;
 }

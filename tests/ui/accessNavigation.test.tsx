@@ -34,7 +34,7 @@ jest.mock('../../src/services/client', () => ({ callService: jest.fn(async (acti
   const { response: reply } = jest.requireActual('../../src/domain/response');
   return action === 'profile'
     ? reply('OK', 'Perfil consultado.', { id: 'demo', name: 'Omar Demo', email: 'demo@example.test', role: 'student' })
-    : reply('OK', 'Consulta realizada.', { restaurants: [], users: [] });
+    : reply('OK', 'Consulta realizada.', { restaurants: [], users: [], orders: [], notices: [] });
 }) }));
 jest.mock('firebase/auth', () => ({ onAuthStateChanged: () => jest.fn(), signOut: jest.fn(async () => {}) }));
 

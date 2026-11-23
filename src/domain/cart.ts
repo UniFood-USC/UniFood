@@ -44,9 +44,12 @@ export const addToStoredCart = (cart: StoredCart, product: Product, quantity = 1
 // base y el porcentaje vigente; el descuento se aplica una sola vez por línea al calcular.
 export type MenuProduct = { id: string; nombre: string; precioCOP: number; disponible: boolean; promocion?: { porcentaje: number; precioFinalCOP: number } };
 
+export const toProduct = (restaurantId: string, product: MenuProduct): Product =>
+  ({ id: product.id, restaurantId, name: product.nombre, priceCOP: product.precioCOP, discountPercent: product.promocion?.porcentaje ?? 0 });
+
 export function fromMenuProduct(restaurantId: string, product: MenuProduct): Product {
   if (!product.disponible) throw new Error('Este producto está agotado.');
-  return { id: product.id, restaurantId, name: product.nombre, priceCOP: product.precioCOP, discountPercent: product.promocion?.porcentaje ?? 0 };
+  return toProduct(restaurantId, product);
 }
 
 // El servicio guarda solo producto y cantidad: nombre, precio y descuento se toman

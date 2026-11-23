@@ -1,5 +1,8 @@
-import { ComingSoon } from '../../components/ComingSoon';
+import SalesHistoryScreen from '../../features/restaurant/SalesHistoryScreen';
+import { useSession } from '../../features/identity/SessionProvider';
 
+// Ventas del restaurante de la cuenta (historial de Nahia, RF-19 y RF-20).
 export default function Route() {
-  return <ComingSoon description="Aquí consultarás tus ventas y reportes por fecha." />;
+  const { identity } = useSession();
+  return <SalesHistoryScreen restaurantId={identity?.restaurantId} />;
 }

@@ -16,8 +16,8 @@ function advanceLabel(order: Order, next: Order['status']) {
   return `Marcar: ${statusLabel(next, order.mode)}`;
 }
 
-export function OrderActions({ order, actor, repository = serverOrderRepository }: {
-  order: Order; actor: Actor; repository?: OrderRepository;
+export function OrderActions({ order, actor, repository = serverOrderRepository, onChanged }: {
+  order: Order; actor: Actor; repository?: OrderRepository; onChanged?: (order: Order) => void;
 }) {
   const [cancelling, setCancelling] = useState(false);
   const [reason, setReason] = useState('');
@@ -29,12 +29,22 @@ export function OrderActions({ order, actor, repository = serverOrderRepository 
   const a = allowedActions(order, actor);
   if (!a.canAdvance && !a.canCancel && !a.needsPayment && !a.canUpdateEstimate) return null;
 
-  async function run(change: Change) {
+    async function run(change: Change) {
     setBusy(true);
-    const res = await repository.change(order.id, change, actor, order.version);
-    setBusy(false);
-    if (!res.ok) { setMessage(res.message); return; }
-    setMessage(null); setCancelling(false); setReason(''); setCode(''); setMinutes('');
+    try {
+      const res = await repository.change(order.id, change, actor, order.version);
+      if (!res.ok) {
+        setMessage(res.message);
+        if (res.current) onChanged?.(res.current);
+        return;
+      }
+      setMessage(null); setCancelling(false); setReason(''); setCode(''); setMinutes('');
+      onChanged?.(res.order);
+    } catch {
+      setMessage('No pudimos completar la acción. Revisa tu conexión e inténtalo de nuevo.');
+    } finally {
+      setBusy(false);
+    }
   }
 
   function advance() {

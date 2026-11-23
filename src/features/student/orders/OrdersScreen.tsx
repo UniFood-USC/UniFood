@@ -30,15 +30,7 @@ function formatWhen(iso: string) {
 export default function OrdersScreen() {
   const router = useRouter();
   const { identity } = useSession();
-  const goBack = () => router.back();
-  const [tab, setTab] = useState<Tab>('active');
-  const { orders, error, loading } = useOrders(serverOrderRepository, {
-    ...(identity?.id ? { studentId: identity.id } : {}),
-  });
-
-  const visible = [...orders]
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .filter((o) => (tab === 'active' ? !isTerminal(o.status) : isTerminal(o.status)));
+  const goBack = () => (router.canGoBack() ? router.back() : router.replace(routes.student));
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -50,6 +42,29 @@ export default function OrdersScreen() {
         <View style={styles.back} />
       </View>
 
+      {identity?.id ? (
+        <StudentOrders
+          studentId={identity.id}
+          onOpen={(id) => router.push(routes.orderTracking(id))}
+        />
+      ) : (
+        <Empty text="Inicia sesión para ver tus pedidos." />
+      )}
+    </ScrollView>
+  );
+}
+
+// Solo se monta con sesión, así que nunca consulta sin un studentId.
+function StudentOrders({ studentId, onOpen }: { studentId: string; onOpen: (orderId: string) => void }) {
+  const [tab, setTab] = useState<Tab>('active');
+  const { orders, error, loading } = useOrders(serverOrderRepository, { studentId });
+
+  const visible = [...orders]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .filter((o) => (tab === 'active' ? !isTerminal(o.status) : isTerminal(o.status)));
+
+  return (
+    <>
       <View accessibilityRole="tablist" style={styles.tabs}>
         {(['active', 'history'] as const).map((t) => {
           const selected = tab === t;
@@ -80,13 +95,13 @@ export default function OrdersScreen() {
           <OrderCard
             key={o.id}
             order={o}
-            studentId={identity?.id ?? ''}
-            canRate={tab === 'history' && !!identity?.id && canRateOrder(o, identity.id)}
-            onOpen={() => router.push(routes.orderTracking(o.id))}
+            studentId={studentId}
+            canRate={tab === 'history' && canRateOrder(o, studentId)}
+            onOpen={() => onOpen(o.id)}
           />
         ))
       )}
-    </ScrollView>
+    </>
   );
 }
 
@@ -97,8 +112,10 @@ function OrderCard({ order, studentId, canRate, onOpen }: {
   onOpen: () => void;
 }) {
   const name = restaurantName(order.restaurantId);
+  const modeText = order.mode === 'pickup' ? 'Recogida' : 'Entrega al salón';
   const scheduled = order.status === 'received' && !!order.scheduledFor;
   const when = scheduled ? `Programado · ${formatWhen(order.scheduledFor!)}` : formatWhen(order.createdAt);
+  const active = !isTerminal(order.status);
 
   return (
     <View style={styles.card}>
@@ -108,9 +125,9 @@ function OrderCard({ order, studentId, canRate, onOpen }: {
         </View>
         <View style={styles.cardBody}>
           <Text style={styles.orderId}>#{order.id}</Text>
-          <Text style={styles.restaurant}>{name}</Text>
+          <Text style={styles.restaurant}>{name} · {modeText}</Text>
           <View style={styles.chip}>
-            <View style={[styles.dot, order.status === 'cancelled' && styles.dotCancelled]} />
+            <View style={[styles.dot, !active && styles.dotInactive]} />
             <Text style={styles.chipText}>{statusLabel(order.status, order.mode)}</Text>
           </View>
           <Text style={styles.when}>{when}</Text>
@@ -145,12 +162,11 @@ function Empty({ text }: { text: string }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  header: { flexDirection: 'row', alignItems: 'center' },
-headerTitle: { flex: 1, textAlign: 'center', fontSize: 24, fontWeight: '700', color: colors.ink },
-back: { width: 44, height: 44, justifyContent: 'center' },
-backText: { fontSize: 32, color: colors.ink, lineHeight: 36 },
   content: { padding: 24, gap: 16, width: '100%', maxWidth: 760, alignSelf: 'center', paddingBottom: 48 },
-  title: { fontSize: 28, fontWeight: '700', color: colors.ink },
+  header: { flexDirection: 'row', alignItems: 'center' },
+  headerTitle: { flex: 1, textAlign: 'center', fontSize: 24, fontWeight: '700', color: colors.ink },
+  back: { width: 44, height: 44, justifyContent: 'center' },
+  backText: { fontSize: 32, color: colors.ink, lineHeight: 36 },
   tabs: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border },
   tab: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
   tabSelected: { borderBottomColor: colors.primary },
@@ -165,7 +181,7 @@ backText: { fontSize: 32, color: colors.ink, lineHeight: 36 },
   restaurant: { fontSize: 15, color: colors.muted },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: colors.accent, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, marginTop: 4 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary },
-  dotCancelled: { backgroundColor: colors.muted },
+  dotInactive: { backgroundColor: colors.muted },
   chipText: { fontSize: 13, fontWeight: '600', color: colors.ink },
   when: { fontSize: 14, color: colors.muted, marginTop: 2 },
   detailBtn: { alignSelf: 'flex-end', minHeight: 44, justifyContent: 'center', paddingHorizontal: 18, borderWidth: 1.5, borderColor: colors.primary, borderRadius: 12 },

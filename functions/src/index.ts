@@ -6,6 +6,9 @@ import { changeUserState, deleteAccount, listUsers, updateUserContact } from './
 import { completeRecovery, requestRecovery } from './recovery';
 import { listRestaurants } from './restaurants';
 import { readMenu, readProduct } from './menu';
+import { readCart, saveCart } from './cart';
+import { placeOrder } from './checkout';
+import { listNotices, registerDevice, unregisterDevice } from './notifications';
 import { changeOrder, getOrder, listOrders } from './orders';
 import { readCart, saveCart } from './cart';
 import { listNotices, registerDevice, unregisterDevice } from './notifications';
@@ -58,6 +61,7 @@ export const api = onRequest({ cors: true, maxInstances: 2 }, async (request, re
         : request.path === '/orders/change' ? await changeOrder(request.headers.authorization, request.body)
         : request.path === '/cart/get' ? await readCart(request.headers.authorization)
         : request.path === '/cart/save' ? await saveCart(request.headers.authorization, request.body)
+        : request.path === '/checkout/place' ? await placeOrder(request.headers.authorization, request.body)
         : request.path === '/notifications/list' ? await listNotices(request.headers.authorization)
         : request.path === '/devices/register' ? await registerDevice(request.headers.authorization, request.body)
         : request.path === '/devices/unregister' ? await unregisterDevice(request.headers.authorization, request.body)

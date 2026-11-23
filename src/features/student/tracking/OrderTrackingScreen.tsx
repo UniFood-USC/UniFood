@@ -24,7 +24,7 @@ export default function OrderTrackingScreen({
 }) {
   const router = useRouter();
   const { identity } = useSession();
-  const { order, error, loading } = useOrderTracking(repository, orderId);
+  const { order, error, loading, apply } = useOrderTracking(repository, orderId);
 
   const goBack = () => (router.canGoBack() ? router.back() : router.replace(routes.orders));
 
@@ -48,7 +48,7 @@ export default function OrderTrackingScreen({
           <Text accessibilityRole="header" style={styles.title}>Estado del pedido</Text>
           <Text style={styles.orderId}>#{order.id}</Text>
           <Text style={styles.subtitle}>
-            {restaurantName(order.restaurantId)} · {order.mode === 'pickup' ? 'Recogida' : 'Entrega al salón'}
+            {order.restaurantName ?? restaurantName(order.restaurantId)} · {order.mode === 'pickup' ? 'Recogida' : 'Entrega al salón'}
           </Text>
         </View>
         <View style={styles.back} />
@@ -79,6 +79,7 @@ export default function OrderTrackingScreen({
 
       {identity && <OrderActions
         order={order}
+        onChanged={apply}
         actor={{ id: identity.id, role: identity.role, ...(identity.restaurantId ? { restaurantId: identity.restaurantId } : {}) }}
       />}
     </ScrollView>

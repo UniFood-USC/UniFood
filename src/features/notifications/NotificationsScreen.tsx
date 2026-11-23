@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Feedback } from '../../components/Feedback';
 import { colors } from '../../constants/theme';
+import { routes } from '../../constants/routes';
 import type { Notice } from '../../domain/notifications';
 import type { ServiceResponse } from '../../domain/response';
 
@@ -12,6 +13,7 @@ const when = (iso: string) => new Date(iso).toLocaleString('es-CO', { day: 'nume
 // RF-12, RF-17 · Bandeja de avisos propios, del más reciente al más antiguo (el servicio ya los ordena).
 // Se consulta al entrar y al volver, así aparecen también los avisos recibidos sin conexión.
 export default function NotificationsScreen({ service }: { service: Service }) {
+  const router = useRouter();
   const [notices, setNotices] = useState<Notice[] | null>(null);
   const [error, setError] = useState('');
   const mounted = useRef(true);
@@ -27,11 +29,12 @@ export default function NotificationsScreen({ service }: { service: Service }) {
     {error ? <Feedback state="error" message={error} onRetry={() => { setError(''); setNotices(null); void load(); }} />
       : !notices ? <Feedback state="loading" message="Consultando tus avisos…" />
       : !notices.length ? <Feedback state="empty" message="Todavía no tienes avisos." />
-      : notices.map(notice => <View key={notice.id} style={styles.card}>
+      : notices.map(notice => <Pressable key={notice.id} accessibilityRole="button" accessibilityLabel={`Ver el pedido de ${notice.title}`}
+        onPress={() => router.push(routes.orderTracking(notice.orderId))} style={styles.card}>
         <Text accessibilityRole="header" style={styles.title}>{notice.title}</Text>
         <Text style={styles.message}>{notice.message}</Text>
-        <Text style={styles.time}>{when(notice.createdAt)}</Text>
-      </View>)}
+        <Text style={styles.time}>{when(notice.createdAt)} · Ver pedido ›</Text>
+      </Pressable>)}
   </ScrollView>;
 }
 

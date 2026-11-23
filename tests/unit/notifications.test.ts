@@ -53,3 +53,8 @@ test.each([
 ])('se rechaza registrar un dispositivo con %s', (_, input) => {
   expect(() => validateDevice(input)).toThrow();
 });
+
+test('la salida y la entrega del pedido también generan su aviso', () => {
+  expect(noticeFor(validateNoticeEvent({ ...event, kind: 'order_on_the_way' }), 'r')).toMatchObject({ title: 'Pedido en camino', message: 'Tu pedido #UC1023 va en camino a tu salón.' });
+  expect(noticeFor(validateNoticeEvent({ ...event, kind: 'order_delivered' }), 'r')).toMatchObject({ title: 'Pedido entregado', message: 'Tu pedido #UC1023 fue entregado.' });
+});
