@@ -19,4 +19,6 @@ test('demo: pedidos de ejemplo guardados con la forma de Order y el restaurante 
   assert.ok(own.some(order => order.paymentMethod === 'cash' && order.paid === false), 'hay un efectivo pendiente');
   assert.ok(orders.some(order => order.restaurantId !== 'rest-burger'), 'hay pedidos de otro restaurante');
   assert.equal((await db.doc('users/demo-restaurant').get()).data()?.restaurantId, 'rest-burger');
+  const cart = (await db.doc('carts/demo-student').get()).data();
+  assert.deepEqual([cart?.restaurantId ?? null, cart?.lines ?? []], [null, []], 'el estudiante demo empieza con el carrito vacío');
 });
