@@ -126,3 +126,9 @@ test('si el menú no se puede consultar no muestra un carrito vacío ni guarda n
   expect(screen.queryByText('Tu carrito está vacío.')).toBeNull();
   expect(service).not.toHaveBeenCalledWith('cart/save', expect.anything());
 });
+
+test('no muestra avisos de productos de ejemplo: el carrito usa el menú real', async () => {
+  await render(<CartScreen service={serviceWith()} />);
+  expect(await screen.findByText('Doble')).toBeTruthy();
+  expect(screen.queryByText(/de ejemplo/)).toBeNull();
+});

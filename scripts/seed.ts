@@ -4,7 +4,6 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { emailKey } from '../functions/src/identity';
 import { readAdminControl } from '../functions/src/adminControl';
 import { seedMenus } from './seed-menu';
-import { exampleProducts } from '../src/features/cart/exampleProducts';
 import type { Order } from '../src/types/domain';
 
 export async function seedDemo() {
@@ -32,8 +31,8 @@ export async function seedDemo() {
       if (control) tx.set(control.ref, { activeCount: control.activeCount + (old?.role === 'admin' && old.state === 'active' ? 0 : 1), version: control.version + 1 });
     });
   }
-  // El estudiante demo empieza con un carrito de ejemplo mientras no exista el menú.
-  await getFirestore().doc('carts/demo-student').set({ userId: 'demo-student', restaurantId: 'rest-burger', lines: exampleProducts.map(product => ({ productId: product.id, quantity: 1 })), version: 1, updatedAt: '2026-10-04T00:00:00Z' });
+  // El estudiante demo empieza con el carrito vacío: cada demo arranca desde el menú.
+  await getFirestore().doc('carts/demo-student').set({ userId: 'demo-student', restaurantId: null, lines: [], version: 1, updatedAt: '2026-10-04T00:00:00Z' });
   await seedRestaurants();
   await seedMenus();   // RF-06: sin esto los restaurantes quedarían sin ningún producto
   await seedOrders();

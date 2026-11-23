@@ -45,3 +45,17 @@ test('RF-12: un cambio rechazado o que no llega a listo no genera avisos', async
   assert.equal(stale.datos.result.ok, false);
   assert.equal(await noticeOf('ready-UC2004_demo-student'), undefined);
 });
+
+test('RF-12: la salida al salón y la entrega avisan al estudiante, una vez cada una', async () => {
+  await seedDemo();
+  const restaurant = await login('restaurant@example.test');
+  const step = async (version: number) => (await post('orders/change', { id: 'UC2002', change: { type: 'advance' }, expectedVersion: version }, restaurant)).datos.result;
+  let order = await step(1);
+  assert.equal(order.order.status, 'ready');
+  order = await step(order.order.version);
+  assert.equal(order.order.status, 'on_the_way');
+  assert.equal((await noticeOf('on_the_way-UC2002_demo-student'))?.title, 'Pedido en camino');
+  order = await step(order.order.version);
+  assert.equal(order.order.status, 'delivered');
+  assert.equal((await noticeOf('delivered-UC2002_demo-student'))?.title, 'Pedido entregado');
+});

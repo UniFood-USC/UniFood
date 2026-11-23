@@ -76,7 +76,6 @@ export default function CartScreen({ service }: { service: Service }) {
   return <SafeAreaView edges={['top']} style={styles.screen}>
     <ScrollView contentContainerStyle={styles.content}>
       <Text accessibilityRole="header" style={styles.title}>Tu carrito</Text>
-      <View style={styles.notice}><Text style={styles.noticeText}>Productos de ejemplo: los reales llegarán con el menú de cada restaurante.</Text></View>
       {!!notice && <View style={styles.notice}><Text accessibilityRole="alert" style={styles.noticeText}>{notice}</Text></View>}
       {!!saveError && <Feedback state="error" message={saveError} onRetry={() => save(cart)} />}
       {!cart.lines.length ? <Feedback state="empty" message="Tu carrito está vacío." /> : cart.lines.map(line => {

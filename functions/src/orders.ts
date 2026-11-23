@@ -152,11 +152,14 @@ export async function changeOrder(authorization: string | undefined, input: unkn
   return response('OK', result.ok ? 'Pedido actualizado.' : result.message, { result });
 }
 
-// RF-12 · Avisos al estudiante tras un cambio confirmado: listo, cancelado y reembolso simulado.
+// RF-12 · Avisos al estudiante tras un cambio confirmado: listo, en camino, entregado (o recogido),
+// cancelado y reembolso simulado.
 // Cada evento tiene un identificador fijo por pedido, así repetir el cambio no duplica avisos.
 async function noticeStudent(order: Order, change: Change) {
-  const events: [string, 'order_ready' | 'order_cancelled' | 'refund'][] = [];
+  const events: [string, 'order_ready' | 'order_on_the_way' | 'order_delivered' | 'order_cancelled' | 'refund'][] = [];
   if (change.type === 'advance' && order.status === 'ready') events.push([`ready-${order.id}`, 'order_ready']);
+  if (change.type === 'advance' && order.status === 'on_the_way') events.push([`on_the_way-${order.id}`, 'order_on_the_way']);
+  if (change.type === 'advance' && (order.status === 'delivered' || order.status === 'collected')) events.push([`delivered-${order.id}`, 'order_delivered']);
   if (change.type === 'cancel') events.push([`cancelled-${order.id}`, 'order_cancelled']);
   if (change.type === 'cancel' && order.refund) events.push([`refund-${order.id}`, 'refund']);
   for (const [id, kind] of events) {

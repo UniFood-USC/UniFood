@@ -42,7 +42,7 @@ export default function SalesHistoryScreen({
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Volver" onPress={() => router.back()} style={styles.back}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Volver" onPress={() => (router.canGoBack() ? router.back() : router.replace('/restaurant'))} style={styles.back}>
           <Text style={styles.backText}>‹</Text>
         </Pressable>
         <Text accessibilityRole="header" style={styles.title}>Historial de ventas</Text>

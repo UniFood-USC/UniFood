@@ -5,6 +5,8 @@
 const texts = {
   new_order: { title: 'Nuevo pedido', message: (n: string) => `Recibiste el pedido #${n}.` },
   order_ready: { title: 'Pedido listo', message: (n: string) => `Tu pedido #${n} está listo para recoger.` },
+  order_on_the_way: { title: 'Pedido en camino', message: (n: string) => `Tu pedido #${n} va en camino a tu salón.` },
+  order_delivered: { title: 'Pedido entregado', message: (n: string) => `Tu pedido #${n} fue entregado.` },
   order_cancelled: { title: 'Pedido cancelado', message: (n: string) => `El pedido #${n} fue cancelado.` },
   refund: { title: 'Reembolso simulado', message: (n: string) => `Se registró el reembolso simulado del pedido #${n}.` },
 } as const;
