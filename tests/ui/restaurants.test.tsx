@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import RestaurantsScreen from '../../src/features/student/restaurants/RestaurantsScreen';
+import StudentScreen from '../../src/features/student/StudentScreen';
 import { response } from '../../src/domain/response';
 import type { RestaurantePublico } from '../../src/types/Estado_Restaurante';
 

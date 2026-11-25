@@ -1,5 +1,7 @@
-import { ComingSoon } from '../../components/ComingSoon';
+import ProductsScreen from '../../features/restaurant/ProductsScreen';
+import { productService } from '../../features/restaurant/productService';
 
+// RF-16 · Gestión de productos del restaurante.
 export default function Route() {
-  return <ComingSoon description="Aquí crearás y editarás los productos de tu menú." />;
+  return <ProductsScreen service={productService} />;
 }
