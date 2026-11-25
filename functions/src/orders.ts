@@ -21,9 +21,8 @@ function orderFilter(input: unknown): OrderFilter | null {
     ...(typeof restaurantId === 'string' ? { restaurantId } : {}),
   };
 }
-
-function toOrder(id: string, data: FirebaseFirestore.DocumentData): Order {
-  return {
+export function toOrder(id: string, data: FirebaseFirestore.DocumentData): Order {
+ return {
     id,
     studentId: data.studentId,
     restaurantId: data.restaurantId,

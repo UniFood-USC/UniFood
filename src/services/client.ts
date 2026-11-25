@@ -3,11 +3,11 @@ import { localFirebase } from './firebase';
 import { signOut } from 'firebase/auth';
 
 // Un solo intento por llamada: una desconexión no demuestra que la mutación falló.
-export async function callService<T = unknown>(action: 'register' | 'recovery/request' | 'recovery/complete' | 'identity' | 'profile' | 'users/create' | 'users/list' | 'users/update' | 'users/state' | 'users/delete' | 'restaurants/list' | 'orders/list' | 'orders/get' | 'orders/change' | 'menu/list' | 'menu/product' | 'products/list' | 'products/save' | 'products/remove' | 'products/photo' | 'cart/get' | 'cart/save' | 'notifications/list' | 'devices/register' | 'devices/unregister', input: unknown): Promise<ServiceResponse<T>> {
+export async function callService<T = unknown>(action: 'register' | 'restaurants/register' | 'restaurants/admin-list' | 'restaurants/admin-update' | 'restaurants/review' | 'restaurants/state' | 'restaurants/mine' | 'restaurants/mine-save' | 'restaurants/resubmit' | 'restaurants/schedule' | 'restaurants/closure' | 'checkout/place' | 'recovery/request' | 'recovery/complete' | 'identity' | 'profile' | 'users/create' | 'users/list' | 'users/update' | 'users/state' | 'users/delete' | 'restaurants/list' | 'orders/list' | 'orders/get' | 'orders/change' | 'menu/list' | 'menu/product' | 'products/list' | 'products/save' | 'products/remove' | 'products/photo' | 'cart/get' | 'cart/save' | 'notifications/list' | 'devices/register' | 'devices/unregister', input: unknown): Promise<ServiceResponse<T>> {
   const { auth, baseUrl, ready } = localFirebase();
   await ready;
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (!['register', 'recovery/request', 'recovery/complete'].includes(action)) {
+  if (!['register', 'restaurants/register', 'recovery/request', 'recovery/complete'].includes(action)) {
     if (!auth.currentUser) return response('SESION_REQUERIDA', 'Se requiere una sesión válida.');
     try { headers.Authorization = `Bearer ${await auth.currentUser.getIdToken()}`; }
     catch (error) {

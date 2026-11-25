@@ -104,7 +104,7 @@ export async function changeUserState(authorization: string | undefined, input: 
     const control = await readAdminControl(tx, db);
     if (currentActor?.role !== 'admin' || currentActor.state !== 'active') return response('NO_AUTORIZADO', 'La cuenta no puede gestionar usuarios.');
     if (!target || target.provisioning || target.state === 'deleted') return response('VALIDACION', 'La cuenta no está disponible.');
-    if (!['student', 'admin'].includes(target.role)) return response('VALIDACION', 'La suspensión de restaurantes estará disponible con su gestión.');
+    if (!['student', 'admin'].includes(target.role)) return response('VALIDACION', 'Suspende restaurantes desde la pestaña Restaurantes.');
     if (target.state !== state) {
       const change = target.role === 'admin' ? (state === 'active' ? 1 : -1) : 0;
       if (change < 0 && control.activeCount <= 2) return response('MINIMO_ADMINISTRADORES', 'Deben permanecer al menos dos administradores activos.');
@@ -144,7 +144,7 @@ export async function deleteAccount(authorization: string | undefined, input: un
     const control = await readAdminControl(tx, db);
     if (currentActor?.role !== 'admin' || currentActor.state !== 'active') return response('NO_AUTORIZADO', 'La cuenta no puede gestionar usuarios.');
     if (!target || target.provisioning) return response('VALIDACION', 'La cuenta no está disponible.');
-    if (!['student', 'admin'].includes(target.role)) return response('VALIDACION', 'La eliminación de restaurantes estará disponible con su gestión.');
+    if (!['student', 'admin'].includes(target.role)) return response('VALIDACION', 'Elimina restaurantes desde la pestaña Restaurantes.');
     if (target.state !== 'deleted') {
       const leavesAdmins = target.role === 'admin' && target.state === 'active';
       if (leavesAdmins && control.activeCount <= 2) return response('MINIMO_ADMINISTRADORES', 'Deben permanecer al menos dos administradores activos.');

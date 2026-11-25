@@ -20,7 +20,7 @@ test('atiende ahora: abre inclusive, cierra exclusive y días sin tramo', () => 
   expect(atiendeAhora(horario, new Date('2026-10-19T23:00:00Z'))).toBe(false); // 18:00 exacto
   expect(atiendeAhora(horario, new Date('2026-10-18T15:00:00Z'))).toBe(false); // domingo, no atiende
   expect(atiendeAhora({ lunes: null }, lunes10)).toBe(false);
-  expect(atiendeAhora({ lunes: { abre: '18:00', cierra: '10:00' } }, lunes10)).toBe(false); // tramo inválido
+  expect(atiendeAhora({ lunes: { abre: '18:00', cierra: '10:00' } }, lunes10)).toBe(false); // franja 18:00→10:00 (cruza medianoche): a las 10:00 del lunes aún no abre
   expect(atiendeAhora({ lunes: { abre: '9:00', cierra: '18:00' } }, lunes10)).toBe(false); // formato inválido
 });
 

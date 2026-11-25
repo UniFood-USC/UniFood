@@ -13,6 +13,11 @@ import { changeOrder, getOrder, listOrders } from './orders';
 import { readCart, saveCart } from './cart';
 import { listNotices, registerDevice, unregisterDevice } from './notifications';
 import { listOwnProducts, readPhoto, removeProduct, saveProduct, uploadPhoto } from './productManagement';
+import {
+  changeRestaurantState, listRestaurantsAdmin, readOwnRestaurant, registerRestaurant, resubmitRestaurant, reviewRestaurant, saveClosure,
+  saveOwnInfo, saveSchedule, updateRestaurantAdmin,
+} from './restaurantManagement';
+
 
 initializeApp();
 
@@ -24,7 +29,6 @@ const publicBaseUrl = (request: Request) => {
     ? `http://${host}/${process.env.GCLOUD_PROJECT}/us-central1/api`
     : `https://${host}`;
 };
-
 export const api = onRequest({ cors: true, maxInstances: 2 }, async (request, reply) => {
   // RF-16 · Las fotos de producto se leen con GET público: la etiqueta <img> no puede enviar sesión.
   if (request.method === 'GET' && request.path.startsWith('/photos/')) {
@@ -36,13 +40,15 @@ export const api = onRequest({ cors: true, maxInstances: 2 }, async (request, re
     return;
   }
   if (request.method !== 'POST') { reply.status(405).json(response('VALIDACION', 'Método no permitido.')); return; }
+    if (request.path === '/restaurants/register') { reply.json(await registerRestaurant(request.body)); return; }
   if (request.path === '/register') { reply.json(await registerStudent(request.body)); return; }
   if (request.path === '/recovery/request') { reply.json(await requestRecovery(request.body)); return; }
   if (request.path === '/recovery/complete') { reply.json(await completeRecovery(request.body)); return; }
   if ([
     '/identity', '/profile',
     '/users/create', '/users/list', '/users/update', '/users/state', '/users/delete',
-    '/restaurants/list', '/menu/list', '/menu/product',
+    '/restaurants/list',     '/restaurants/admin-list', '/restaurants/admin-update', '/restaurants/review', '/restaurants/state',
+    '/restaurants/mine', '/restaurants/mine-save', '/restaurants/resubmit', '/restaurants/schedule', '/restaurants/closure','/menu/list', '/menu/product',
     '/products/list', '/products/save', '/products/remove', '/products/photo',
     '/orders/list', '/orders/get', '/orders/change',
     '/cart/get', '/cart/save',
@@ -50,6 +56,15 @@ export const api = onRequest({ cors: true, maxInstances: 2 }, async (request, re
   ].includes(request.path)) {
     try {
       const result = request.path === '/restaurants/list' ? await listRestaurants(request.headers.authorization)
+              : request.path === '/restaurants/admin-list' ? await listRestaurantsAdmin(request.headers.authorization)
+        : request.path === '/restaurants/admin-update' ? await updateRestaurantAdmin(request.headers.authorization, request.body)
+        : request.path === '/restaurants/review' ? await reviewRestaurant(request.headers.authorization, request.body)
+        : request.path === '/restaurants/state' ? await changeRestaurantState(request.headers.authorization, request.body)
+        : request.path === '/restaurants/mine' ? await readOwnRestaurant(request.headers.authorization)
+        : request.path === '/restaurants/mine-save' ? await saveOwnInfo(request.headers.authorization, request.body)
+        : request.path === '/restaurants/resubmit' ? await resubmitRestaurant(request.headers.authorization, request.body)
+        : request.path === '/restaurants/schedule' ? await saveSchedule(request.headers.authorization, request.body)
+        : request.path === '/restaurants/closure' ? await saveClosure(request.headers.authorization, request.body)
         : request.path === '/menu/list' ? await readMenu(request.headers.authorization, request.body)
         : request.path === '/menu/product' ? await readProduct(request.headers.authorization, request.body)
         : request.path === '/products/list' ? await listOwnProducts(request.headers.authorization)

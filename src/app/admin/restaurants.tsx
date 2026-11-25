@@ -1,5 +1,7 @@
-import { ComingSoon } from '../../components/ComingSoon';
+import RestaurantsAdminScreen from '../../features/admin/RestaurantsAdminScreen';
+import { callService } from '../../services/client';
 
+// RF-22 · Gestión de restaurantes (administración).
 export default function Route() {
-  return <ComingSoon description="Aquí aprobarás y administrarás los restaurantes del campus." />;
+  return <RestaurantsAdminScreen service={callService} />;
 }

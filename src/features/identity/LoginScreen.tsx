@@ -12,9 +12,10 @@ type Props = {
   signIn: (input: { email: string; password: string }) => Promise<ServiceResponse<LoginIdentity>>;
   onRegister: () => void;
   onRecover?: () => void;
+  onRegisterRestaurant?: () => void;
   sessionMessage?: string;
 };
-export default function LoginScreen({ signIn, onRegister, onRecover, sessionMessage }: Props) {
+export default function LoginScreen({ signIn, onRegister, onRecover, onRegisterRestaurant, sessionMessage }: Props) {
   const { width } = useWindowDimensions();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -69,6 +70,11 @@ export default function LoginScreen({ signIn, onRegister, onRecover, sessionMess
               <Text style={styles.link}>Crear cuenta</Text>
             </Pressable>
           </View>
+          {onRegisterRestaurant && <View style={styles.signUp}><Text style={styles.text}>¿Tienes un restaurante?</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="Registrar mi restaurante" disabled={pending} onPress={onRegisterRestaurant} style={styles.linkButton}>
+              <Text style={styles.link}>Registrar mi restaurante</Text>
+            </Pressable>
+          </View>}
           <View style={{ height: Math.min(width, 480) * 0.4 }} />
         </SafeAreaView>
       </View>

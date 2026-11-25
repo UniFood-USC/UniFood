@@ -15,6 +15,7 @@ function Navigator() {
     <Stack.Screen name="index" options={{ headerShown: false }} />
     <Stack.Screen name="login" options={{ headerShown: false }} />
     <Stack.Screen name="register" options={{ title: 'Crear cuenta', headerShown: false }} />
+    <Stack.Screen name="register-restaurant" options={{ headerShown: false }} />
     <Stack.Screen name="recover" options={{ headerShown: false }} />
     <Stack.Screen name="reset" options={{ headerShown: false }} />
     <Stack.Protected guard={identity?.role === 'student'}>

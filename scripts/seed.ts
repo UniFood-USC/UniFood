@@ -16,6 +16,9 @@ export async function seedDemo() {
     { id: 'demo-admin-2', email: 'admin2@example.test', name: 'Administrador Demo Dos', role: 'admin' },
     { id: 'demo-student', email: 'student@usc.edu.co', name: 'Estudiante Demo', role: 'student' },
     { id: 'demo-restaurant', email: 'restaurant@example.test', name: 'Restaurante Demo', role: 'restaurant', restaurantId: 'rest-burger' },
+    // RF-22 · Cuentas para probar el registro pendiente y la corrección de un registro rechazado.
+    { id: 'demo-restaurant-nuevo', email: 'pendiente@example.test', name: 'Sabores Nuevos', role: 'restaurant', restaurantId: 'rest-nuevo' },
+    { id: 'demo-restaurant-rechazado', email: 'rechazado@example.test', name: 'Cocina Rechazada', role: 'restaurant', restaurantId: 'rest-rechazado' },
   ];
   for (const user of users) {
     try { await getAuth().createUser({ uid: user.id, email: user.email, password: 'Demo1234', displayName: user.name }); }
@@ -26,7 +29,7 @@ export async function seedDemo() {
       const old = (await tx.get(ref)).data();
       const control = user.role === 'admin' ? await readAdminControl(tx, db) : null;
       // La cuenta de restaurante administra Burger Campus: el servicio de pedidos filtra por este campo.
-      tx.set(ref, { ...user, ...(user.role === 'restaurant' ? { restaurantId: 'rest-burger' } : {}), state: 'active', version: 1, sessionVersion: 1, createdAt: '2026-10-04T00:00:00Z' });
+      tx.set(ref, { ...user, state: 'active', version: 1, sessionVersion: 1, createdAt: '2026-10-04T00:00:00Z' });
       tx.set(db.doc(`emailReservations/${emailKey(user.email)}`), { userId: user.id });
       if (control) tx.set(control.ref, { activeCount: control.activeCount + (old?.role === 'admin' && old.state === 'active' ? 0 : 1), version: control.version + 1 });
     });
@@ -86,13 +89,20 @@ export async function seedRestaurants() {
     { id: 'rest-arepas', nombre: 'Arepas del Valle', logo: logo('AV'), estado: 'aprobado', activo: true, horario: semana(LUN_VIE, '07:00', '16:00') },
     // No se listan para el estudiante.
     { id: 'rest-wok', nombre: 'Wok Express', logo: logo('WE'), estado: 'aprobado', activo: false, horario: semana(LUN_SAB, '10:00', '18:00') },
-    { id: 'rest-nuevo', nombre: 'Sabores Nuevos', estado: 'pendiente', activo: true },
+    { id: 'rest-nuevo', nombre: 'Sabores Nuevos', estado: 'pendiente', activo: true, horario: semana(LUN_VIE, '08:00', '17:00') },
+    { id: 'rest-rechazado', nombre: 'Cocina Rechazada', estado: 'rechazado', activo: true, motivoRechazo: 'Falta indicar la ubicación exacta dentro del campus.', horario: semana(LUN_VIE, '09:00', '15:00') },
     { id: 'rest-baja', nombre: 'Taquería Suspendida', estado: 'suspendido', activo: true },
     { id: 'rest-eliminado', nombre: 'Fonda Cerrada', estado: 'eliminado', activo: false },
   ];
+  // Cuentas propietarias (una por establecimiento). El resto simula establecimientos sin cuenta asociada.
+  const propietarios: Record<string, string> = { 'rest-burger': 'demo-restaurant', 'rest-pizza': 'demo-restaurant-pizza', 'rest-nuevo': 'demo-restaurant-nuevo', 'rest-rechazado': 'demo-restaurant-rechazado' };
+  const correos: Record<string, string> = { 'rest-burger': 'restaurant@example.test', 'rest-pizza': 'pizza@example.test', 'rest-nuevo': 'pendiente@example.test', 'rest-rechazado': 'rechazado@example.test' };
   for (const { id, ...datos } of restaurantes) {
-    // ownerEmail y ownerId simulan los campos privados que el listado nunca debe exponer.
-    await db.doc(`restaurantes/${id}`).set({ ...datos, ownerId: 'demo-restaurant', ownerEmail: 'restaurant@example.test' });
+    await db.doc(`restaurantes/${id}`).set({
+      descripcion: `Comida de ${datos.nombre} para la comunidad USC.`, ubicacion: 'Cafetería central, primer piso', telefono: '3001234567',
+      correo: correos[id] ?? `${id}@example.test`, cierresEspeciales: [], cierreTemporal: null, motivoRechazo: null, version: 1,
+      ...datos, ...(propietarios[id] ? { ownerId: propietarios[id] } : {}),
+    });
   }
 }
 
@@ -102,5 +112,5 @@ if (/[\\/]seed\.ts$/.test(process.argv[1] ?? '')) {
   process.env.GCLOUD_PROJECT ??= 'demo-unifood';
   process.env.FIREBASE_AUTH_EMULATOR_HOST ??= '127.0.0.1:9099';
   process.env.FIRESTORE_EMULATOR_HOST ??= '127.0.0.1:8080';
-  seedDemo().then(() => console.log('Cuatro identidades, diez restaurantes y sus menús ficticios preparados en demo-unifood.')).catch(error => { console.error(error.message); process.exitCode = 1; });
+  seedDemo().then(() => console.log('Seis identidades, once restaurantes y sus menús ficticios preparados en demo-unifood.')).catch(error => { console.error(error.message); process.exitCode = 1; });
 }

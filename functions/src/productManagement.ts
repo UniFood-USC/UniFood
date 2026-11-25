@@ -5,6 +5,7 @@ import {
   aProductoPropio, errorContenidoFoto, esIdSeguro, FOTO_MAX_BYTES, FORMATOS_FOTO, listarProductosPropios, MENSAJE_AGOTADO,
   PRODUCTO_AJENO, referenciaFoto, revisarLineas, validarGuardado, validarRetiro, validarSubidaFoto, type ProductoPropio,
 } from '../../src/domain/productManagement';
+import { puedePrepararInformacion } from '../../src/domain/restaurantManagement';
 import { response } from '../../src/domain/response';
 import type { RestauranteDoc } from '../../src/types/Estado_Restaurante';
 import type { ProductoDoc } from '../../src/types/Menu';
@@ -23,7 +24,8 @@ async function ownRestaurant(authorization: string | undefined, db: Firestore, r
   // Pedir explícitamente otro restaurante es un intento de modificar el menú ajeno.
   if (requested !== null && requested !== actor.restaurantId) return { error: response('NO_AUTORIZADO', PRODUCTO_AJENO) };
   const restaurante = (await db.doc(`restaurantes/${actor.restaurantId}`).get()).data() as Partial<RestauranteDoc> | undefined;
-  if (!restaurante || restaurante.estado !== 'aprobado') return { error: response('NO_AUTORIZADO', 'Tu restaurante no puede gestionar productos en este momento.') };
+  // RF-22 · Pendiente o rechazado también preparan su menú (no aparece ante estudiantes hasta ser aprobado); suspendido y eliminado no.
+  if (!restaurante || !puedePrepararInformacion(restaurante.estado)) return { error: response('NO_AUTORIZADO', 'Tu restaurante no puede gestionar productos en este momento.') };
   return { restaurantId: actor.restaurantId, actorId: actor.id };
 }
 

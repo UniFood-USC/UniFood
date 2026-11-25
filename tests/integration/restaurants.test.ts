@@ -11,7 +11,7 @@ async function login(email: string, password = 'Demo1234') {
   assert.ok(reply.idToken);
   return reply.idToken as string;
 }
-const PUBLICOS = ['id', 'nombre', 'logo', 'disponible', 'proximaApertura'];
+const PUBLICOS = ['id', 'nombre', 'logo', 'disponible', 'proximaApertura', 'cierreTemporal'];
 const DIAS = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
 type Fila = { id: string; nombre: string; disponible: boolean; proximaApertura?: string };
 
